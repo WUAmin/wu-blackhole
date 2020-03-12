@@ -1,0 +1,23 @@
+{
+    "version": [ 0, 5, 0 ]
+    "temp_dir": "/tmp/WBH-temp",
+    "db_filename": "wbh.db",
+    "blackhole_config_filename": ".__WBH__.json",
+    "blackhole_queue_dirname": ".WBH_QUEUE",
+    "bot": {
+        "api": "",
+        "proxy": None,
+        "chat_ids": {
+            "admins": [
+                {
+                    "id": -1,
+                    "name": ""
+                }
+            ],
+            "mods": [],
+            "users": []
+        },
+    },
+    "chunk_size": 48000000,
+    "path_check_interval": 3
+}
