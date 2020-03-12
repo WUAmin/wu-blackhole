@@ -5,7 +5,6 @@ import datetime
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-
 from wublackhole.wbh_item import WBHChunk, WBHItem
 
 
@@ -112,49 +111,48 @@ class WBHDatabase:
 
 
     def add_item_folder(self, item: WBHItem, blackhole_id, parent_item):
-        parent_id = None
         try:
-            if item.IsDir:
+            if item.is_dir:
                 res = self.add_item(item, blackhole_id, None)
-                for child in item.Children:
+                for child in item.children:
                     self.add_item_folder(child, blackhole_id, res.id)
             else:
                 self.add_item(item, blackhole_id, parent_item)
         except Exception as e:
-            print("  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.FullPath, str(e)))
+            print("  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
 
 
     def add_item(self, item_wbhi: WBHItem, blackhole_id, parent_id):
         new_item = None
         try:
             session = self.Session()
-            new_item = self.WBHDbItems(filename=item_wbhi.Filename,
-                                       is_dir=item_wbhi.IsDir,
-                                       size=item_wbhi.Size,
-                                       root_path=item_wbhi.RootPath,
-                                       full_path=item_wbhi.FullPath,
+            new_item = self.WBHDbItems(filename=item_wbhi.filename,
+                                       is_dir=item_wbhi.is_dir,
+                                       size=item_wbhi.size,
+                                       root_path=item_wbhi.root_path,
+                                       full_path=item_wbhi.full_path,
                                        blackhole_id=blackhole_id,
                                        parent_id=parent_id,
-                                       created_at=datetime.datetime.fromtimestamp(item_wbhi.CreatedAt),
-                                       modified_at=datetime.datetime.fromtimestamp(item_wbhi.ModifiedAt))
-            if item_wbhi.IsDir:
+                                       created_at=datetime.datetime.fromtimestamp(item_wbhi.created_at),
+                                       modified_at=datetime.datetime.fromtimestamp(item_wbhi.modified_at))
+            if item_wbhi.is_dir:
                 # item_counts for directories
-                new_item.items_count = item_wbhi.TotalChildren
+                new_item.items_count = item_wbhi.total_children
             else:
                 # chunks_count for files
-                new_item.chunks_count = len(item_wbhi.Chunks)
+                new_item.chunks_count = len(item_wbhi.chunks)
             # Add/Commit item to database
             session.add(new_item)
             session.commit()
         except Exception as e:
-            print("  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.FullPath, str(e)))
+            print("  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
 
-        if not item_wbhi.IsDir:
+        if not item_wbhi.is_dir:
             # Add all chunks to Database
             ch: WBHChunk
             try:
                 session = self.Session()
-                for ch in item_wbhi.Chunks:
+                for ch in item_wbhi.chunks:
                     new_ch = self.WBHDbChunks(msg_id=ch.MessageID,
                                               filename=ch.Filename,
                                               size=ch.Size,
@@ -165,7 +163,7 @@ class WBHDatabase:
                     session.add(new_ch)
                 session.commit()
             except Exception as e:
-                print("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}".format(item_wbhi.FullPath, str(e)))
+                print("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
         return new_item
 
 

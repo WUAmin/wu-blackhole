@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 import json
 import os
-
 from wublackhole.wbh_queue import WBHQueue
-
-import settings as settings
+from config import config
 
 
 class WBHBlackHole:
@@ -14,11 +12,11 @@ class WBHBlackHole:
         self.Name = name
         self.TelegramID = telegram_id
         # Create/Load Queue from disk
-        self.Queue = WBHQueue(os.path.join(self.FullPath, settings.BlackHoleQueueDirName, 'queue.json'), self)
+        self.Queue = WBHQueue(os.path.join(self.FullPath, config.core['blackhole_queue_dirname'], 'queue.json'), self)
         # Get/Create BlackHole from/in database
-        bh_id = settings.Database.get_blackhole(name)
+        bh_id = config.Database.get_blackhole(name)
         if not bh_id:
-            bh_id = settings.Database.add_blackhole(name, -1, telegram_id)
+            bh_id = config.Database.add_blackhole(name, -1, telegram_id)
         self.ID: int = bh_id.id
 
 
@@ -39,7 +37,7 @@ class WBHBlackHole:
 
     def save(self):
         """ return true if saved successfully to disk"""
-        bh_config_path = os.path.join(self.FullPath, settings.BlackHoleConfigFilename)
+        bh_config_path = os.path.join(self.FullPath, config.core['blackhole_config_filename'])
         print("🕐 Saving BlackHole config to `{}`".format(bh_config_path))
         try:
             with open(bh_config_path, 'w') as f:

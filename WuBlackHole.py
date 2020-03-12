@@ -2,50 +2,55 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
-import subprocess
 
 from past.builtins import raw_input
+
+from config import config
+# import settings as settings
 from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_bot import WBHTelegramBot
 from wublackhole.wbh_db import WBHDatabase
 from wublackhole.wbh_watcher import get_path_contents, print_path_contents, watch_path
 
-import settings as settings
 
+# TODO: Add checksum to files (db)
+# TODO: Add Ability to do a lightweight encryption with a random key in db or a key for blackhole
+# TODO: ability to retrieve data
+# TODO: Flask/Vue.js for GUI
 
-def run_command(command):
-    my_env = os.environ.copy()
-    my_env["HOME"] = settings.DataDir
-    p = subprocess.Popen(command,
-                         env=my_env,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
-    return iter(p.stdout.readline, b'')
+# def run_command(command):
+#     my_env = os.environ.copy()
+#     my_env["HOME"] = config.DataDir
+#     p = subprocess.Popen(command,
+#                          env=my_env,
+#                          stdout=subprocess.PIPE,
+#                          stderr=subprocess.STDOUT)
+#     return iter(p.stdout.readline, b'')
 
+#
+# def run_telegram_cli(tg_cmd, is_json=False):
+#     # env HOME=$PWD/WuBlackhole_Data bash -c 'echo $HOME'
+#     # env HOME="/mnt/D-WuDisk1/DEV/wu-telegram/WuBlackhole_Data" "telegram-cli" -W -e "msg @WUAmin \"sgsh\""
+#     # Add Enviroment variables
+#     cmd = f'env HOME={config.DataDir}'
+#     # Add telegram-cli path
+#     cmd += f' {settings.TelegramCli_Path}'
+#     # Add '-W    send dialog_list query and wait for answer before reading input'
+#     cmd += f' -W'
+#     # Add '-D    disable output'
+#     # cmd += f' -D'
+#     # Add --json to output json
+#     if is_json:
+#         cmd += f' --json'
+#     # Add telegram-cli command
+#     cmd += f" -e '{tg_cmd}'"
+#     print(f'Exec: {cmd}')
+#     p = os.popen(cmd)
+#     return p.read()
 
-def run_telegram_cli(tg_cmd, is_json=False):
-    # env HOME=$PWD/WuBlackhole_Data bash -c 'echo $HOME'
-    # env HOME="/mnt/D-WuDisk1/DEV/wu-telegram/WuBlackhole_Data" "telegram-cli" -W -e "msg @WUAmin \"sgsh\""
-    # Add Enviroment variables
-    cmd = f'env HOME={settings.DataDir}'
-    # Add telegram-cli path
-    cmd += f' {settings.TelegramCli_Path}'
-    # Add '-W    send dialog_list query and wait for answer before reading input'
-    cmd += f' -W'
-    # Add '-D    disable output'
-    # cmd += f' -D'
-    # Add --json to output json
-    if is_json:
-        cmd += f' --json'
-    # Add telegram-cli command
-    cmd += f" -e '{tg_cmd}'"
-    print(f'Exec: {cmd}')
-    p = os.popen(cmd)
-    return p.read()
-
-
-def tg_Message(peer, msg):
-    return run_telegram_cli(f'msg {peer} "{msg}"', is_json=True)
+#
+# def tg_Message(peer, msg):
+#     return run_telegram_cli(f'msg {peer} "{msg}"', is_json=True)
 
 
 # def tg_LastMessageID(peer):
@@ -55,33 +60,33 @@ def tg_Message(peer, msg):
 
 def init_temp():
     # Clear leftover of old temp files
-    files = os.listdir(settings.TempDir)
+    files = os.listdir(config.core['temp_dir'])
     t_i = 0
     for file in files:
         if file.startswith("WBHTF"):
             ext = os.path.splitext(file)[1]
             if len(ext) == 6 and ext.startswith(".p"):
                 try:
-                    os.remove(os.path.join(settings.TempDir, file))
+                    os.remove(os.path.join(config.core['temp_dir'], file))
                     t_i += 1
                 except:
-                    print("❌ Error while deleting file : ", os.path.join(settings.TempDir, file))
+                    print("❌ Error while deleting file : ", os.path.join(config.core['temp_dir'], file))
     if t_i > 0:
         print(f"⚠️ {t_i} old temp files deleted.")
 
-    # os.makedirs(os.path.join(settings.TempDir, 'qeue'))
+    # os.makedirs(os.path.join(config.core['temp_dir'], 'qeue'))
     pass
 
 
 def create_config_on_blackhole_dir(bh_config_path: str, bh_path: str):
     """ Create config file in blackhole directory"""
-    print(f"  ℹ Generating `{settings.BlackHoleConfigFilename}` in `{bh_path}`...")
+    print(f"  ℹ Generating `{config.core['blackhole_config_filename']}` in `{bh_path}`...")
     while True:
         # BlackHole Name
         bh_name = os.path.basename(bh_path)
         bh_name = raw_input(f"  ✏️ Enter blackhole name [{bh_name}]:") or bh_name
         # Telegram Chat ID
-        bh_telegram_id = settings.DefaultChatID
+        bh_telegram_id = config.DefaultChatID
         bh_telegram_id = raw_input(f"  ✏️ Enter Telegram Chat ID [{bh_telegram_id}]:") or bh_telegram_id
         # Verification
         answer: str = 'y'
@@ -94,7 +99,7 @@ def create_config_on_blackhole_dir(bh_config_path: str, bh_path: str):
                                   name=bh_name,
                                   telegram_id=bh_telegram_id)
                 bh.save()
-                print(f"✅ Generate `{settings.BlackHoleConfigFilename}` in `{bh_path}`")
+                print(f"✅ Generate `{config.core['blackhole_config_filename']}` in `{bh_path}`")
                 return bh
             elif answer.lower() == 'n':
                 break
@@ -104,31 +109,38 @@ def create_config_on_blackhole_dir(bh_config_path: str, bh_path: str):
 
 def init_WBH():
     # Check/Create BlackHole Data Directory
-    if not os.path.exists(settings.DataDir):
-        os.makedirs(settings.DataDir)
+    if not os.path.exists(config.DataDir):
+        os.makedirs(config.DataDir)
+
+    # Check/Create BlackHole Temp Directory
+    if not os.path.exists(config.core['temp_dir']):
+        print(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
+        os.makedirs(config.core['temp_dir'])
+        print(f"✅ Created TempDir at `{config.core['temp_dir']}`")
+
 
     # BlackHole Paths's QueueDir
     bh: WBHBlackHole
-    for bh in settings.BlackHoles:
-        queue_dir = os.path.join(bh.FullPath, settings.BlackHoleQueueDirName)
+    for bh in config.BlackHoles:
+        queue_dir = os.path.join(bh.FullPath, config.core['blackhole_queue_dirname'])
         # Check/Create BlackHole Path
         if not os.path.exists(queue_dir):
             print(f"⚠️ Queue directory `{queue_dir}` does not exist.")
             os.makedirs(queue_dir)
             print(f"✅ Created queue directory at `{queue_dir}`")
 
-    settings.TelegramBot = WBHTelegramBot()
-    # settings.TelegramBot.start_bot()
+    config.TelegramBot = WBHTelegramBot()
+    # config.TelegramBot.start_bot()
 
 
 def parse_args(args):
     # Check input: -t, --tempdir    Temp Directory
-    if 'tempdir' in args:
-        settings.TempDir = args.tempdir.strip()
-        if not os.path.exists(settings.TempDir):
-            print(f"⚠️ TempDir `{settings.TempDir}` does not exist.")
-            os.makedirs(settings.TempDir)
-            print(f"✅ Created TempDir at `{settings.TempDir}`")
+    # if 'tempdir' in args:
+    #     config.core['temp_dir'] = args.tempdir.strip()
+    #     if not os.path.exists(config.core['temp_dir']):
+    #         print(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
+    #         os.makedirs(config.core['temp_dir'])
+    #         print(f"✅ Created TempDir at `{config.core['temp_dir']}`")
 
     # Check input: paths    paths to watch
     if len(args.paths) <= 0:
@@ -149,15 +161,15 @@ def parse_args(args):
                     # settings.paths.append(os.path.abspath(p))
 
                     # Check/Create .__WBH__.conf Path
-                    bh_config_path = os.path.join(bh_path, settings.BlackHoleConfigFilename)
+                    bh_config_path = os.path.join(bh_path, config.core['blackhole_config_filename'])
                     if not os.path.exists(bh_config_path):
-                        print(f"⚠️ `{settings.BlackHoleConfigFilename}` file does not exist in `{bh_path}`")
+                        print(f"⚠️ `{config.core['blackhole_config_filename']}` file does not exist in `{bh_path}`")
                         bh = create_config_on_blackhole_dir(bh_config_path, bh_path)
-                        settings.BlackHoles.append(bh)
+                        config.BlackHoles.append(bh)
                     else:
                         print(f"⏳️ Loading BlackHole config file in `{bh_path}`")
-                        bh = WBHBlackHole.load(os.path.join(bh_path, settings.BlackHoleConfigFilename))
-                        settings.BlackHoles.append(bh)
+                        bh = WBHBlackHole.load(os.path.join(bh_path, config.core['blackhole_config_filename']))
+                        config.BlackHoles.append(bh)
                 else:
                     print(' ❌ {:03d}: `{}` should be a folder.'.format(i_p, bh_path))
             else:
@@ -174,8 +186,8 @@ def init_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-t', '--tempdir', type=str,
-                        help='Specify temp directory to split files if needed. \n'
-                             f'Default: [{settings.TempDir}]')
+                        help="Specify temp directory to split files if needed. \n"
+                             f"Default: [{config.core['temp_dir']}]")
 
     parser.add_argument('paths', nargs='+',
                         help='Paths to watch')
@@ -183,41 +195,34 @@ def init_args():
     return parser.parse_args()
 
 
-# ============ START =============
-if __name__ == "__main__":
-    print(f'\nWU-Blackhole {settings.version}\n')
-
-    settings.Database = WBHDatabase(settings.DbPath, True)
+def main():
+    print(f'\nWU-Blackhole {config.version_str()}\n')
+    config.Database = WBHDatabase(os.path.join(config.DataDir, config.core['db_filename']), False)
 
     # # Database Test
-    # settings.Database = WBHDatabase(settings.DbPath)
+    # config.Database = WBHDatabase(settings.DbPath)
     # for i in range(10000000):
     #     start_t = time.process_time()
     #     for j in range(10000):
-    #         bh_new = settings.Database.WBHDbBlackHoles(name="BH {}x{}".format(i, j), size=i*j, telegram_id="1")
-    #         settings.Database.session.add(bh_new)
-    #     settings.Database.session.commit()
+    #         bh_new = config.Database.WBHDbBlackHoles(name="BH {}x{}".format(i, j), size=i*j, telegram_id="1")
+    #         config.Database.session.add(bh_new)
+    #     config.Database.session.commit()
     #     elapsed_t = time.process_time() - start_t
     #     print("{}x Insert 100000 item in {:02f} secs".format(i, elapsed_t))
 
     parse_args(init_args())
-
-    print(f"ℹ️ TelegramCli_Path:     `{settings.TelegramCli_Path}`")
-    print(f"ℹ️ WBH_Data_Dir:         `{settings.DataDir}`")
-    print(f"ℹ️ TempDir:              `{settings.TempDir}`")
-    print(f"ℹ️ DEFAULT_CHANNEL_ID:   `{settings.DefaultChatID}`")
 
     init_WBH()
     init_temp()
 
     # Before start to watch the paths
     # Empty the Queue by sending to BlackHole
-    for bh in settings.BlackHoles:
+    for bh in config.BlackHoles:
         bh.Queue.process_queue(bh.TelegramID)
 
     # start watchers for paths
     bh: WBHBlackHole
-    for bh in settings.BlackHoles:
+    for bh in config.BlackHoles:
         watch_path(bh)
         # start_watch(bh_path)
 
@@ -231,5 +236,9 @@ if __name__ == "__main__":
     #               filename='link to file.jpg',
     #               caption='link to file.jpg')
 
-# 📄📂📁🗂❌✅❎🔗ℹ️⚠❔❓
-# 🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛⏳⌛️⏱
+
+# ============ START =============
+if __name__ == "__main__":
+    main()
+
+#  📄📂📁🗂❌✅❎🔗ℹ️⚠❔❓🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛⏳⌛️⏱

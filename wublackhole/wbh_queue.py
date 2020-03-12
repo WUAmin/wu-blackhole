@@ -3,11 +3,9 @@
 import json
 import os
 import shutil
-
 from wublackhole.wbh_item import WBHItem, WBHItemState
 from wublackhole.wbh_watcher import get_path_contents
-
-import settings as settings
+from config import config
 
 
 class WBHQueue:
@@ -26,7 +24,7 @@ class WBHQueue:
 
     def add(self, item: WBHItem):
         """ return true if added item successfully"""
-        item.State = WBHItemState.INQUEUE
+        item.state = WBHItemState.INQUEUE
         self.items.append(item)
 
 
@@ -67,38 +65,38 @@ class WBHQueue:
         while len(self.items) > 0:
             first_item: WBHItem = self.items[0]
             # Check if item is file or directory
-            if first_item.IsDir:
+            if first_item.is_dir:
                 # Directory
-                first_item.Children, first_item.TotalChildren = get_path_contents(
-                    os.path.join(first_item.RootPath, settings.BlackHoleQueueDirName),
-                    parents=[first_item.Filename], populate_info=True)
-                first_item.State = WBHItemState.UPLOADING
-                if settings.TelegramBot.send_folder_to_blackhole(first_item, telegram_id):
-                    print("✅ Sent `{}` to BlackHole.".format(first_item.Filename))
+                first_item.children, first_item.total_children = get_path_contents(
+                    os.path.join(first_item.root_path, config.core['blackhole_queue_dirname']),
+                    parents=[first_item.filename], populate_info=True)
+                first_item.state = WBHItemState.UPLOADING
+                if config.TelegramBot.send_folder_to_blackhole(first_item, telegram_id):
+                    print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
                     # Add to Database
-                    settings.Database.add_item_folder(first_item, self.blackhole.ID, None)
+                    config.Database.add_item_folder(first_item, self.blackhole.ID, None)
                     # Remove folder
-                    shutil.rmtree(first_item.FullPath, ignore_errors=True)
+                    shutil.rmtree(first_item.full_path, ignore_errors=True)
                     self.remove(first_item)
-                    print("✅ `{}` removed from queue and disk.".format(first_item.Filename))
+                    print("✅ `{}` removed from queue and disk.".format(first_item.filename))
                     # Save Queue to disk
                     self.save()
                 else:
-                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.Filename))
+                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
             else:
                 # File
-                first_item.State = WBHItemState.UPLOADING
-                if settings.TelegramBot.send_file_to_blackhole(first_item, telegram_id):
-                    print("✅ Sent `{}` to BlackHole.".format(first_item.Filename))
+                first_item.state = WBHItemState.UPLOADING
+                if config.TelegramBot.send_file_to_blackhole(first_item, telegram_id):
+                    print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
                     # Add to Database
-                    settings.Database.add_item(first_item, self.blackhole.ID, None)
+                    config.Database.add_item(first_item, self.blackhole.ID, None)
                     # Remove file
-                    os.remove(first_item.FullPath)
+                    os.remove(first_item.full_path)
                     self.remove(first_item)
-                    print("✅ `{}` removed from queue and disk.".format(first_item.Filename))
+                    print("✅ `{}` removed from queue and disk.".format(first_item.filename))
                     # Save Queue to disk
                     self.save()
                 else:
-                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.Filename))
+                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
 
         # exit()
