@@ -1,5 +1,6 @@
 # App Data
-WuBlackhole_Data/
+config/*.db
+config/settings.json
 
 # Environments
 .env
