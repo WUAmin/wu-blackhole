@@ -10,11 +10,11 @@ from config import config
 from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_bot import WBHTelegramBot
 from wublackhole.wbh_db import WBHDatabase
-from wublackhole.wbh_watcher import get_path_contents, print_path_contents, watch_path
+from wublackhole.wbh_watcher import start_watch
 
 
-# TODO: Add checksum to files (db)
-# TODO: Add Ability to do a lightweight encryption with a random key in db or a key for blackhole
+# TODO: Add Ability to do ChaCha20Poly1305 encryption  (key on db and password by user input)
+# TODO: Add Ability to do Fernet encryption (key on db only)
 # TODO: ability to retrieve data
 # TODO: Flask/Vue.js for GUI
 
@@ -70,9 +70,10 @@ def init_temp():
                     os.remove(os.path.join(config.core['temp_dir'], file))
                     t_i += 1
                 except:
-                    print("❌ Error while deleting file : ", os.path.join(config.core['temp_dir'], file))
+                    config.logger_core.error("❌ Error while deleting file : ",
+                                             os.path.join(config.core['temp_dir'], file))
     if t_i > 0:
-        print(f"⚠️ {t_i} old temp files deleted.")
+        config.logger_core.debug(f"⚠️ {t_i} old temp files deleted.")
 
     # os.makedirs(os.path.join(config.core['temp_dir'], 'qeue'))
     pass
@@ -80,7 +81,7 @@ def init_temp():
 
 def create_config_on_blackhole_dir(bh_config_path: str, bh_path: str):
     """ Create config file in blackhole directory"""
-    print(f"  ℹ Generating `{config.core['blackhole_config_filename']}` in `{bh_path}`...")
+    config.logger_core.info(f"  ℹ Generating `{config.core['blackhole_config_filename']}` in `{bh_path}`...")
     while True:
         # BlackHole Name
         bh_name = os.path.basename(bh_path)
@@ -99,12 +100,12 @@ def create_config_on_blackhole_dir(bh_config_path: str, bh_path: str):
                                   name=bh_name,
                                   telegram_id=bh_telegram_id)
                 bh.save()
-                print(f"✅ Generate `{config.core['blackhole_config_filename']}` in `{bh_path}`")
+                config.logger_core.info(f"✅ Generate `{config.core['blackhole_config_filename']}` in `{bh_path}`")
                 return bh
             elif answer.lower() == 'n':
                 break
             else:
-                print(f"  ⚠️ Enter y or m")
+                print(f"  ⚠️ Enter y or n")
 
 
 def init_WBH():
@@ -112,105 +113,106 @@ def init_WBH():
     if not os.path.exists(config.DataDir):
         os.makedirs(config.DataDir)
 
+    # Database
+    config.Database = WBHDatabase(os.path.join(config.DataDir, config.core['db_filename']), False)
+
+    # initialize Blackhole IDs
+    bh: WBHBlackHole
+    for bh in config.BlackHoles:
+        if bh.id is None:
+            bh.init_id()
+
     # Check/Create BlackHole Temp Directory
     if not os.path.exists(config.core['temp_dir']):
-        print(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
+        config.logger_core.warning(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
         os.makedirs(config.core['temp_dir'])
-        print(f"✅ Created TempDir at `{config.core['temp_dir']}`")
-
+        config.logger_core.info(f"✅ Created TempDir at `{config.core['temp_dir']}`")
 
     # BlackHole Paths's QueueDir
     bh: WBHBlackHole
     for bh in config.BlackHoles:
-        queue_dir = os.path.join(bh.FullPath, config.core['blackhole_queue_dirname'])
+        queue_dir = os.path.join(bh.dirpath, config.core['blackhole_queue_dirname'])
         # Check/Create BlackHole Path
         if not os.path.exists(queue_dir):
-            print(f"⚠️ Queue directory `{queue_dir}` does not exist.")
+            config.logger_core.warning(f"⚠️ Queue directory `{queue_dir}` does not exist.")
             os.makedirs(queue_dir)
-            print(f"✅ Created queue directory at `{queue_dir}`")
+            config.logger_core.info(f"✅ Created queue directory at `{queue_dir}`")
 
     config.TelegramBot = WBHTelegramBot()
     # config.TelegramBot.start_bot()
 
 
-def parse_args(args):
-    # Check input: -t, --tempdir    Temp Directory
-    # if 'tempdir' in args:
-    #     config.core['temp_dir'] = args.tempdir.strip()
-    #     if not os.path.exists(config.core['temp_dir']):
-    #         print(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
-    #         os.makedirs(config.core['temp_dir'])
-    #         print(f"✅ Created TempDir at `{config.core['temp_dir']}`")
-
-    # Check input: paths    paths to watch
-    if len(args.paths) <= 0:
-        print(
-            "❌ Error: you have to specify paths as your last argument",
-            " for application to be able to file files to throw in the blackhole")
-        exit(0)
-    else:
-        print(f'{len(args.paths)} paths:')
-        i_p = 0
-        is_error = False
-        for bh_path in args.paths:
-            if os.path.exists(bh_path):
-                if os.path.isdir(bh_path):
-                    print(' 📂 {:03d}: `{}`'.format(i_p, bh_path))
-                    contents, t = get_path_contents(bh_path)
-                    print_path_contents(contents=contents, line_pre_txt='   ')
-                    # settings.paths.append(os.path.abspath(p))
-
-                    # Check/Create .__WBH__.conf Path
-                    bh_config_path = os.path.join(bh_path, config.core['blackhole_config_filename'])
-                    if not os.path.exists(bh_config_path):
-                        print(f"⚠️ `{config.core['blackhole_config_filename']}` file does not exist in `{bh_path}`")
-                        bh = create_config_on_blackhole_dir(bh_config_path, bh_path)
-                        config.BlackHoles.append(bh)
-                    else:
-                        print(f"⏳️ Loading BlackHole config file in `{bh_path}`")
-                        bh = WBHBlackHole.load(os.path.join(bh_path, config.core['blackhole_config_filename']))
-                        config.BlackHoles.append(bh)
-                else:
-                    print(' ❌ {:03d}: `{}` should be a folder.'.format(i_p, bh_path))
-            else:
-                print(' ❌ {:03d}: `{}` does not exist.'.format(i_p, bh_path))
-                is_error = True
-        i_p += 1
-        if is_error:
-            exit(1)
-
-
-def init_args():
-    """ Return ArgumentParser on successful initialization """
-    # parser = argparse.ArgumentParser(description='')
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('-t', '--tempdir', type=str,
-                        help="Specify temp directory to split files if needed. \n"
-                             f"Default: [{config.core['temp_dir']}]")
-
-    parser.add_argument('paths', nargs='+',
-                        help='Paths to watch')
-
-    return parser.parse_args()
+# def parse_args(args):
+#     # Check input: -t, --tempdir    Temp Directory
+#     # if 'tempdir' in args:
+#     #     config.core['temp_dir'] = args.tempdir.strip()
+#     #     if not os.path.exists(config.core['temp_dir']):
+#     #         print(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
+#     #         os.makedirs(config.core['temp_dir'])
+#     #         print(f"✅ Created TempDir at `{config.core['temp_dir']}`")
+#
+#     # Check input: paths    paths to watch
+#     if len(args.paths) <= 0:
+#         config.logger_core.fatal(
+#             "❌ Error: you have to specify paths as your last argument",
+#             " for application to be able to file files to throw in the blackhole")
+#         exit(0)
+#     else:
+#         config.logger_core.debug(f'{len(args.paths)} paths:')
+#         i_p = 0
+#         is_error = False
+#         for bh_path in args.paths:
+#             if os.path.exists(bh_path):
+#                 if os.path.isdir(bh_path):
+#                     # config.logger.debug(' 📂 {:03d}: `{}`'.format(i_p, bh_path))
+#                     # contents, t = get_path_contents(bh_path)
+#                     # print_path_contents(contents=contents, line_pre_txt='   ')
+#
+#                     # Check/Create .__WBH__.conf Path
+#                     bh_config_path = os.path.join(bh_path, config.core['blackhole_config_filename'])
+#                     if not os.path.exists(bh_config_path):
+#                         config.logger_core.warning(
+#                             f"⚠️ `{config.core['blackhole_config_filename']}` file does not exist in `{bh_path}`")
+#                         bh = create_config_on_blackhole_dir(bh_config_path, bh_path)
+#                         config.BlackHoles.append(bh)
+#                     else:
+#                         config.logger_core.debug(f"⏳️ Loading BlackHole config file in `{bh_path}`")
+#                         bh = WBHBlackHole.load(os.path.join(bh_path, config.core['blackhole_config_filename']))
+#                         config.BlackHoles.append(bh)
+#                 else:
+#                     config.logger_core.error(' ❌ {:03d}: `{}` should be a folder.'.format(i_p, bh_path))
+#             else:
+#                 config.logger_core.fatal(' ❌ {:03d}: `{}` does not exist.'.format(i_p, bh_path))
+#                 is_error = True
+#         i_p += 1
+#         if is_error:
+#             exit(1)
+#
+#
+# def init_args():
+#     """ Return ArgumentParser on successful initialization """
+#     # parser = argparse.ArgumentParser(description='')
+#     parser = argparse.ArgumentParser()
+#
+#     parser.add_argument('-t', '--tempdir', type=str,
+#                         help="Specify temp directory to split files if needed. \n"
+#                              f"Default: [{config.core['temp_dir']}]")
+#
+#     parser.add_argument('paths', nargs='+',
+#                         help='Paths to watch')
+#
+#     return parser.parse_args()
 
 
 def main():
     print(f'\nWU-Blackhole {config.version_str()}\n')
-    config.Database = WBHDatabase(os.path.join(config.DataDir, config.core['db_filename']), False)
+    # Load config
+    config.config_filepath = os.path.join(config.DataDir, "config.json")
+    config.load()
+    config.logger_core.info('')
+    config.logger_core.info(f'WU-Blackhole {config.version_str()}')
 
-    # # Database Test
-    # config.Database = WBHDatabase(settings.DbPath)
-    # for i in range(10000000):
-    #     start_t = time.process_time()
-    #     for j in range(10000):
-    #         bh_new = config.Database.WBHDbBlackHoles(name="BH {}x{}".format(i, j), size=i*j, telegram_id="1")
-    #         config.Database.session.add(bh_new)
-    #     config.Database.session.commit()
-    #     elapsed_t = time.process_time() - start_t
-    #     print("{}x Insert 100000 item in {:02f} secs".format(i, elapsed_t))
-
-    parse_args(init_args())
+    # parse_args(init_args())
 
     init_WBH()
     init_temp()
@@ -218,26 +220,15 @@ def main():
     # Before start to watch the paths
     # Empty the Queue by sending to BlackHole
     for bh in config.BlackHoles:
-        bh.Queue.process_queue(bh.TelegramID)
+        bh.queue.process_queue(bh.telegram_id)
 
     # start watchers for paths
     bh: WBHBlackHole
     for bh in config.BlackHoles:
-        watch_path(bh)
+        start_watch(bh)
         # start_watch(bh_path)
 
-    # send_file('/home/wuamin/Desktop/Desktop_[Win]/WU-BlackHole.temp/test.mkv')
 
-    # while True:
-    #     print(f"⌛ Sleep for {settings.FILE_CHECK_INTERVAL} seconds...")
-    #     time.sleep(settings.FILE_CHECK_INTERVAL)
-
-    # bot.send_file(filepath='http://mirrors.standaloneinstaller.com/video-sample/small.mp4',
-    #               filename='link to file.jpg',
-    #               caption='link to file.jpg')
-
-
-# ============ START =============
 if __name__ == "__main__":
     main()
 

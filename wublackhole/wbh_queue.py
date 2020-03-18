@@ -3,9 +3,10 @@
 import json
 import os
 import shutil
-from wublackhole.wbh_item import WBHItem, WBHItemState
-from wublackhole.wbh_watcher import get_path_contents
+
 from config import config
+from wublackhole.wbh_item import QueueState, WBHChunk, WBHItem, ChecksumType
+from wublackhole.wbh_watcher import get_checksum_sha256_file, get_checksum_sha256_folder
 
 
 class WBHQueue:
@@ -17,86 +18,257 @@ class WBHQueue:
             self.load()
 
 
+    def is_item_exist_list(self, item: WBHItem, items: list) -> WBHItem:
+        """ return true if item exist in given list, Recursively """
+        if item in items:
+            return True
+        else:
+            itm2: WBHItem
+            for itm2 in items:
+                if itm2.is_dir:
+                    if self.is_item_exist_list(item, itm2.children):
+                        return True
+        return False
+
+
     def is_item_exist(self, item: WBHItem) -> bool:
-        """ return true if item exist in queue list """
-        return item in self.items
+        """ return true if item exist in queue list, Recursively """
+        return self.is_item_exist_list(item, self.items)
+
+
+    def get_item_by_qid_list(self, qid: int, items: list) -> WBHItem:
+        """ return WBHItem if item exist with qid in given list, Recursively """
+        item: WBHItem
+        for item in items:
+            if item.qid == qid:
+                return item
+            elif item.is_dir:
+                sub_item = self.get_item_by_qid_list(qid, item.children)
+                if sub_item:
+                    return sub_item
+        return None
+
+
+    def get_item_by_qid(self, qid: int) -> WBHItem:
+        """ return WBHItem if item exist with qid in queue list, Recursively """
+        return self.get_item_by_qid_list(qid, self.items)
 
 
     def add(self, item: WBHItem):
         """ return true if added item successfully"""
-        item.state = WBHItemState.INQUEUE
+        item.state = QueueState.INQUEUE
         self.items.append(item)
 
 
-    def remove(self, item: WBHItem):
+    def _remove_recursively(self, item: WBHItem, items: list):
         """ return true if removed item successfully"""
-        self.items.remove(item)
-        # itm: WatchPathItem
-        # for itm in self.items:
-        #     if item.Name == itm.Name:
+        itm: WBHItem
+        for itm in items:
+            if item.qid == itm.qid:  # Found
+
+                items.remove(itm)
+                return True
+            elif itm.children:  # Try children
+                if self._remove_recursively(item, itm.children):
+                    # found in children
+                    return True
+        return False
+
+
+    def remove(self, item: WBHItem):
+        """ return true if removed item successfully (Recursive)"""
+        return self._remove_recursively(item, self.items)
 
 
     def save(self):
         """ return true if saved queue successfully to disk"""
-        print("🕐 Saving queue to `{}`".format(self.queue_file))
+        config.logger_core.debug("🕐 Saving queue to `{}`".format(self.queue_file))
         try:
             with open(self.queue_file, 'w') as f:
                 json.dump([o.to_dict() for o in self.items], f, sort_keys=False)
         except Exception as e:
-            print("  ❌ ERROR: Can not save queue to `{}`:\n {}".format(self.queue_file, str(e)))
-        print("  ✅ Queue saved with {} items".format(len(self.items)))
+            config.logger_core.error("  ❌ ERROR: Can not save queue to `{}`:\n {}".format(self.queue_file, str(e)))
+        config.logger_core.debug("  ✅ Queue saved with {} items".format(len(self.items)))
 
 
     def load(self):
         """ return true if loaded queue successfully from disk"""
-        print("🕐 Loading queue from `{}`".format(self.queue_file))
+        config.logger_core.debug("🕐 Loading queue from `{}`".format(self.queue_file))
         try:
             with open(self.queue_file, 'r') as f:
                 data_j = json.load(f)
                 for itm in data_j:
                     self.items.append(WBHItem.from_dict(itm))
         except Exception as e:
-            print("  ❌ ERROR: Can not load queue from `{}`:\n {}".format(self.queue_file, str(e)))
-        print("  ✅ Queue loaded with {} items".format(len(self.items)))
+            config.logger_core.error("  ❌ ERROR: Can not load queue from `{}`:\n {}".format(self.queue_file, str(e)))
+        config.logger_core.debug("  ✅ Queue loaded with {} items".format(len(self.items)))
+
+
+    # def process_queue_list(self, telegram_id: str, items: list):
+    #     """ Empty queue by sending items to BlackHole """
+    #     while len(self.items) > 0:
+    #         first_item: WBHItem = self.items[0]
+    #         # Check if item is file or directory
+    #         if first_item.is_dir:
+    #             # Directory
+    #             first_item.children, first_item.total_children = get_path_contents(
+    #                 os.path.join(first_item.root_path, config.core['blackhole_queue_dirname']),
+    #                 parents=[first_item.filename], populate_info=True)
+    #             first_item.state = WBHItemState.UPLOADING
+    #             if config.TelegramBot.send_folder_to_blackhole(first_item, telegram_id):
+    #                 print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
+    #                 # Add to Database
+    #                 config.Database.add_item_folder(first_item, self.blackhole.id, None)
+    #                 # Remove folder
+    #                 shutil.rmtree(first_item.full_path, ignore_errors=True)
+    #                 self.remove(first_item)
+    #                 print("✅ `{}` removed from queue and disk.".format(first_item.filename))
+    #                 # Save Queue to disk
+    #                 self.save()
+    #             else:
+    #                 print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
+    #         else:
+    #             # File
+    #             first_item.state = WBHItemState.UPLOADING
+    #             if config.TelegramBot.send_file_to_blackhole(first_item, telegram_id):
+    #                 print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
+    #                 # Add to Database
+    #                 config.Database.add_item(first_item, self.blackhole.id, None)
+    #                 # Remove file
+    #                 os.remove(first_item.full_path)
+    #                 self.remove(first_item)
+    #                 print("✅ `{}` removed from queue and disk.".format(first_item.filename))
+    #                 # Save Queue to disk
+    #                 self.save()
+    #             else:
+    #                 print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
+
+    def process_queue_list(self, telegram_id: str, items: list, parent: WBHItem = None):
+        """ Empty queue by sending items to BlackHole. Return True if there was nothing to do """
+        everything_is_done = True
+        item: WBHItem
+        for item in items:
+            # Check if item is file or directory
+            if item.is_dir:
+                # == Directory ==
+                try:
+                    if item.state == QueueState.INQUEUE:
+                        everything_is_done = False
+                        # Update item state
+                        item.state = QueueState.UPLOADING
+                        # get item checksum
+                        item.checksum = get_checksum_sha256_folder(item.full_path)
+                        item.checksum_type = ChecksumType.SHA256
+                        # Add to Database and Update db_id on queue item
+                        item.db_id = config.Database.add_item(item_wbhi=item, blackhole_id=self.blackhole.id,
+                                                              parent_id=parent.db_id if parent else None)
+                        if item.db_id:  # If item added to database
+                            # Update item state
+                            item.state = QueueState.DONE
+                            # Save Queue to disk
+                            self.save()
+                    # else:
+                    #     config.logger_core.debug(
+                    #         "☑️ `{}` state is {}. Ignore item itself. Checking Children...".format(item.filename,
+                    #                                                                                item.state.name))
+                    if item.state == QueueState.DONE:
+                        # Check children
+                        if item.children:
+                            if self.process_queue_list(telegram_id, item.children, item):
+                                # All children of a root item are in DONE state
+                                # Remove folder
+                                shutil.rmtree(item.full_path, ignore_errors=True)
+                                config.logger_core.debug("✅ `{}` removed from disk.".format(item.filename))
+                                item.state = QueueState.DELETED
+                                # Save Queue to disk
+                                self.save()
+
+                    if item.state == QueueState.DELETED and parent is None:
+                        # Remove top level item with DELETED state, that means all chunks are sent
+                        self.remove(item)
+                        config.logger_core.debug("✅ `{}` removed from queue.".format(item.filename))
+                        # Save Queue to disk
+                        self.save()
+                except Exception as e:
+                    config.logger_core.error("❌ ERROR: Could add item `{}` to BlackHole: {}"
+                                             .format(item.filename, str(e)))
+            else:
+                # == File ==
+                if item.state == QueueState.INQUEUE:
+                    try:
+                        everything_is_done = False
+                        # Update item state
+                        item.state = QueueState.UPLOADING
+                        # get item checksum
+                        item.checksum = get_checksum_sha256_file(item.full_path)
+                        item.checksum_type = ChecksumType.SHA256
+                        # Add to Database and update db_id on queue
+                        item.db_id = config.Database.add_item(item_wbhi=item, blackhole_id=self.blackhole.id,
+                                                              parent_id=parent.db_id if parent else None)
+                        # Save Queue to disk
+                        self.save()
+                    except Exception as e:
+                        config.logger_core.error("❌ ERROR: Could add item `{}` to Database: {}"
+                                             .format(item.filename, str(e)))
+                if item.state == QueueState.UPLOADING:
+                    try:
+                        everything_is_done = False
+                        # Send File to blackhole
+                        if config.TelegramBot.send_file(item, self.blackhole):
+                            config.logger_core.debug("✅ Sent `{}` to BlackHole.".format(item.filename))
+                            # Update item state and db_id
+                            item.state = QueueState.DONE
+                        else:
+                            config.logger_core.error(
+                                "❌ ERROR: Could not send `{}` to BlackHole????".format(item.filename))
+                        # Save Queue to disk
+                        self.save()
+                    except Exception as e:
+                        config.logger_core.error(
+                            "❌ ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
+                if item.state == QueueState.DONE:
+                    everything_is_done = False
+                    try:
+                        # Check if all chunks are sent
+                        all_chunks_done = True
+                        chunk: WBHChunk
+                        for chunk in item.chunks:
+                            if chunk.state == QueueState.UPLOADING:
+                                all_chunks_done = False
+                                config.TelegramBot.send_chunk_file(chunk=chunk, blackhole=self.blackhole)
+                                # Save Queue to disk
+                                self.save()
+                        if all_chunks_done: # If all there is no chunk with UPLOADING state
+                            # Add all chunks to Database
+                            chunk: WBHChunk
+                            for chunk in item.chunks:
+                                if chunk.state == QueueState.UPLOADING:
+                                    chunk.db_id = config.Database.add_chunk(chunk=chunk, blackhole_id=self.blackhole.id,
+                                                                            parent_id=item.db_id)
+                                    chunk.state = QueueState.DONE
+                            # Remove file
+                            os.remove(item.full_path)
+                            item.state = QueueState.DELETED
+                            config.logger_core.debug("✅ `{}` removed from disk.".format(item.filename))
+                            # Save Queue to disk
+                            self.save()
+                    except Exception as e:
+                        config.logger_core.error(
+                            "❌ ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
+                if item.state == QueueState.DELETED and parent is None:
+                    # Remove top level item with DELETED state, that means all chunks are sent
+                    self.remove(item)
+                    config.logger_core.debug("✅ `{}` removed from queue.".format(item.filename))
+                    # Save Queue to disk
+                    self.save()
+
+                # if item.state < QueueState.INQUEUE:
+                #     config.logger_core.warning("⚠ WARNING: There is a `{}` in queue with state of {}"
+                #                                .format(item.filename, item.state.name))
+
+        return everything_is_done
 
 
     def process_queue(self, telegram_id: str):
         """ Empty queue by sending items to BlackHole """
-        while len(self.items) > 0:
-            first_item: WBHItem = self.items[0]
-            # Check if item is file or directory
-            if first_item.is_dir:
-                # Directory
-                first_item.children, first_item.total_children = get_path_contents(
-                    os.path.join(first_item.root_path, config.core['blackhole_queue_dirname']),
-                    parents=[first_item.filename], populate_info=True)
-                first_item.state = WBHItemState.UPLOADING
-                if config.TelegramBot.send_folder_to_blackhole(first_item, telegram_id):
-                    print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
-                    # Add to Database
-                    config.Database.add_item_folder(first_item, self.blackhole.ID, None)
-                    # Remove folder
-                    shutil.rmtree(first_item.full_path, ignore_errors=True)
-                    self.remove(first_item)
-                    print("✅ `{}` removed from queue and disk.".format(first_item.filename))
-                    # Save Queue to disk
-                    self.save()
-                else:
-                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
-            else:
-                # File
-                first_item.state = WBHItemState.UPLOADING
-                if config.TelegramBot.send_file_to_blackhole(first_item, telegram_id):
-                    print("✅ Sent `{}` to BlackHole.".format(first_item.filename))
-                    # Add to Database
-                    config.Database.add_item(first_item, self.blackhole.ID, None)
-                    # Remove file
-                    os.remove(first_item.full_path)
-                    self.remove(first_item)
-                    print("✅ `{}` removed from queue and disk.".format(first_item.filename))
-                    # Save Queue to disk
-                    self.save()
-                else:
-                    print("❌ ERROR: Could not send `{}` to BlackHole.".format(first_item.filename))
-
-        # exit()
+        return self.process_queue_list(telegram_id, self.items)

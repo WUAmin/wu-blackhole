@@ -3,3 +3,17 @@ A [Telegram Bot](https://github.com/python-telegram-bot/python-telegram-bot) tha
 
 
 
+
+#### Log Level
+|Level   |Value |
+|--------|:----:|
+|Debug   |  10  |
+|Info    |  20  |
+|Warning |  30  |
+|Error   |  40  |
+
+
+
+#### Temporary Notes:
+* Max block size is 50M. Some encryption methods may increase the final file size. be careful about that and do not use max limit.
+* Do not change block size while there is items in queue.

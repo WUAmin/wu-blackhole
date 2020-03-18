@@ -3,8 +3,11 @@
 import datetime
 
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
+
+from config import config
 from wublackhole.wbh_item import WBHChunk, WBHItem
 
 
@@ -40,7 +43,7 @@ class WBHDatabase:
         items_count = Column(BigInteger)
         chunks_count = Column(BigInteger)
         checksum = Column(String)
-        checksum_type = Column(String)
+        checksum_type = Column(SMALLINT)
         root_path = Column(String)
         full_path = Column(String)
         created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -70,8 +73,8 @@ class WBHDatabase:
         size = Column(BigInteger)
         index = Column(BigInteger)
         checksum = Column(String)
-        checksum_type = Column(String)
-        encryption = Column(String)
+        checksum_type = Column(SMALLINT)
+        encryption = Column(SMALLINT)
         encryption_data = Column(String)
         uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
         # blackhole - One To Many
@@ -96,8 +99,6 @@ class WBHDatabase:
             self.conn = self.engine.connect()
             self.Session = sessionmaker(bind=self.engine)
             self.Base.metadata.create_all(self.engine)
-
-        print("INIT")
 
 
     def get_blackhole(self, name: str):
@@ -125,16 +126,21 @@ class WBHDatabase:
             else:
                 self.add_item(item, blackhole_id, parent_item)
         except Exception as e:
-            print("  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
+            config.logger_core.error(
+                "  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
 
 
     def add_item(self, item_wbhi: WBHItem, blackhole_id, parent_id):
+        """ return id of item in database if successful, None on error"""
         new_item = None
         try:
+            config.logger_core.debug("🕐 Adding item `{}` to Database".format(item_wbhi.filename))
             session = self.Session()
             new_item = self.WBHDbItems(filename=item_wbhi.filename,
                                        is_dir=item_wbhi.is_dir,
                                        size=item_wbhi.size,
+                                       checksum=item_wbhi.checksum,
+                                       checksum_type=item_wbhi.checksum_type.value,
                                        root_path=item_wbhi.root_path,
                                        full_path=item_wbhi.full_path,
                                        blackhole_id=blackhole_id,
@@ -146,31 +152,77 @@ class WBHDatabase:
                 new_item.items_count = item_wbhi.total_children
             else:
                 # chunks_count for files
-                new_item.chunks_count = len(item_wbhi.chunks)
+                if item_wbhi.chunks:
+                    new_item.chunks_count = len(item_wbhi.chunks)
             # Add/Commit item to database
             session.add(new_item)
             session.commit()
+            config.logger_core.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
         except Exception as e:
-            print("  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
+            config.logger_core.error(
+                "  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
 
-        if not item_wbhi.is_dir:
-            # Add all chunks to Database
-            ch: WBHChunk
-            try:
-                session = self.Session()
-                for ch in item_wbhi.chunks:
-                    new_ch = self.WBHDbChunks(msg_id=ch.MessageID,
-                                              filename=ch.Filename,
-                                              size=ch.Size,
-                                              index=ch.Index,
-                                              blackhole_id=blackhole_id,
-                                              items_id=new_item.id)
-                    # Add/Commit item to database
-                    session.add(new_ch)
-                session.commit()
-            except Exception as e:
-                print("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
-        return new_item
+        # if not item_wbhi.is_dir:
+        #     # Add all chunks to Database
+        #     ch: WBHChunk
+        #     try:
+        #         session = self.Session()
+        #         for ch in item_wbhi.chunks:
+        #             new_ch = self.WBHDbChunks(msg_id=ch.msg_id,
+        #                                       filename=ch.filename,
+        #                                       size=ch.size,
+        #                                       index=ch.index,
+        #                                       blackhole_id=blackhole_id,
+        #                                       items_id=new_item.id)
+        #             # Add/Commit item to database
+        #             session.add(new_ch)
+        #         session.commit()
+        #     except Exception as e:
+        #         config.logger_core.error("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}"
+        #                                  .format(item_wbhi.full_path, str(e)))
+        return new_item.id if new_item else None
+
+
+    def add_chunk(self, chunk: WBHChunk, blackhole_id, parent_id):
+        """ return id of chunk in database if successful, None on error"""
+        new_chunk = None
+        try:
+            config.logger_core.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
+            session = self.Session()
+            new_chunk = self.WBHDbChunks(msg_id=chunk.msg_id,
+                                         filename=chunk.filename,
+                                         size=chunk.size,
+                                         index=chunk.index,
+                                         checksum=chunk.checksum,
+                                         checksum_type=chunk.checksum_type.value,
+                                         encryption=chunk.encryption.value,
+                                         encryption_data=chunk.encryption_data,
+                                         blackhole_id=blackhole_id,
+                                         items_id=parent_id)
+            # Add/Commit chunk to database
+            session.add(new_chunk)
+            session.commit()
+            config.logger_core.debug("✅ chunk#{} of `{}` added to Database.".format(chunk.index, chunk.org_filename))
+        except Exception as e:
+            config.logger_core.error(
+                "  ❌ ERROR: Can not add  chunk#{} of `{}` to database:\n {}".format(chunk.index, chunk.org_filename, str(e)))
+        return new_chunk.id if new_chunk else None
+
+
+    def update_item_chunk_count(self, item_wbhi: WBHItem, chunk_count):
+        try:
+            config.logger_core.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
+            session = self.Session()
+
+            # Add/Commit item to database
+            item_db = session.query(self.WBHDbItems).filter_by(id=item_wbhi.db_id).first()
+            item_db.chunks_count = chunk_count
+            session.commit()
+            config.logger_core.debug(
+                "✅ chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
+        except Exception as e:
+            config.logger_core.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
+                                     .format(item_wbhi.full_path, str(e)))
 
 
     def __exit__(self, exc_type, exc_value, traceback):

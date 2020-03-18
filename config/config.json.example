@@ -1,23 +1,47 @@
 {
-    "version": [ 0, 5, 0 ]
-    "temp_dir": "/tmp/WBH-temp",
+  "version": [
+    0,
+    7,
+    0
+  ],
+  "blackholes": [
+    {
+      "id": null,
+      "dirpath": "BLACKHOLE-DIRECTORY-PATH",
+      "name": "BLACKHOLE-NAME (changing name, create a new blackhole in database)",
+      "telegram_id": "-1"
+    }
+  ],
+  "core": {
+    "temp_dir": ".temp",
     "db_filename": "wbh.db",
     "blackhole_config_filename": ".__WBH__.json",
     "blackhole_queue_dirname": ".WBH_QUEUE",
     "bot": {
-        "api": "",
-        "proxy": None,
-        "chat_ids": {
-            "admins": [
-                {
-                    "id": -1,
-                    "name": ""
-                }
-            ],
-            "mods": [],
-            "users": []
-        },
+      "api": "YOUR-BOT-ID",
+      "proxy": {
+        "proxy_url": null
+      },
+      "chat_ids": {
+        "admins": [
+          {
+            "id": -1,
+            "name": "YOUR-CHANNEL-NAME (As a comment. ONLY ID MATTERS)"
+          }
+        ],
+        "mods": [],
+        "users": []
+      }
     },
     "chunk_size": 48000000,
-    "path_check_interval": 3
+    "path_check_interval": 6,
+    "log": {
+      "core": {
+        "level": 20
+      },
+      "bot": {
+        "level": 20
+      }
+    }
+  }
 }

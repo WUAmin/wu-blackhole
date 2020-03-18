@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 import tempfile
 from enum import Enum
+
+import wublackhole
 
 
 class Config:
@@ -9,7 +12,7 @@ class Config:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [0, 5, 0]
+        self.version: list = [0, 7, 0]
 
         # Load from config.json
         self.core: dict = {
@@ -32,60 +35,90 @@ class Config:
                 },
             },
             "chunk_size": 48000000,
-            "path_check_interval": 3
+            "path_check_interval": 3,
+            "log": {
+                "core": {
+                    "level": 10
+                },
+                "bot": {
+                    "level": 20
+                }
+            }
         }
 
         # Variables to keep on runtime
-        self.Database = None
+        self.Database: wublackhole.wbh_db.WBHDatabase = None
         self.BlackHoles: list = []
-        self.TelegramBot = None
+        self.TelegramBot: wublackhole.wbh_bot.WBHTelegramBot = None
+        self.config_filepath = None
+
+        # create logger with 'blackhole_core'
+        console = logging.StreamHandler()
+        file_handler = logging.FileHandler("core.log", "w")
+        # noinspection PyArgumentList
+        logging.basicConfig(level=self.core['log']['core']['level'],
+                            format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
+                            handlers=[file_handler, console])
+        self.logger_core = logging.getLogger('core')
+        self.logger_bot = logging.getLogger('bot')
 
         # Generating config based on config.json
         self.DataDir = os.path.join(os.path.split(os.path.realpath(__file__))[0], "config")
-        self.config_file = None
+        # self.config_filepath = config_filepath
         self.init_config()
 
         # Load config.json if exist
-        if os.path.exists(self.config_file):
-            self.load()
+        # if os.path.exists(self.config_filepath):
+        #     self.load()
 
 
     def init_config(self):
         """ Generating some of config based on config.json """
-        self.config_file = os.path.join(self.DataDir, "config.json")
-        # TODO: Use list of admins insted of one ID
+        # TODO: Use list of admins instead of one ID
         self.DefaultChatID = self.core['bot']['chat_ids']['admins'][0]['id']
+        # Update log config
+        self.logger_core.setLevel(self.core['log']['core']['level'])
+        self.logger_bot.setLevel(self.core['log']['bot']['level'])
 
 
     def save(self):
         """ return true if saved config successfully to disk"""
-        print("🕐 Saving config to `{}`".format(self.config_file))
+        self.logger_core.debug("🕐 Saving config to `{}`".format(self.config_filepath))
         try:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_filepath, 'w') as f:
                 json.dump({
                     "version": self.version,
                     "core": self.core
                 }, f, sort_keys=False, indent=2, ensure_ascii=False)
         except Exception as e:
-            print("  ❌ ERROR: Can not save config to `{}`:\n {}".format(self.config_file, str(e)))
+            self.logger_core.error("  ❌ ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        print("  ✅ config saved.")
+        self.logger_core.debug("  ✅ config `{}` saved.".format(self.config_filepath))
         return True
 
 
     def load(self):
         """ return true if loaded config successfully from disk"""
-        print("🕐 Loading config from `{}`".format(self.config_file))
+        self.logger_core.debug("🕐 Loading config from `{}`".format(self.config_filepath))
         try:
-            with open(self.config_file, 'r') as f:
+            with open(self.config_filepath, 'r') as f:
                 data_j = json.load(f)
                 self.version = data_j['version']
                 self.core = data_j['core']
+
+                # Check BlackHoles
+                self.BlackHoles = list()
+                for blackhole in data_j['blackholes']:
+                    self.BlackHoles.append(
+                        wublackhole.wbh_blackhole.WBHBlackHole(dirpath=blackhole['dirpath'], name=blackhole['name'],
+                                                               telegram_id=blackhole['telegram_id'],
+                                                               _id=blackhole['id']))
                 self.init_config()
         except Exception as e:
-            print("  ❌ ERROR: Can not load config from `{}`:\n {}".format(self.config_file, str(e)))
+            self.logger_core.error(
+                "  ❌ ERROR: Can not load config from `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        print("  ✅ config loaded.")
+        self.logger_core.debug("  ✅ config `{}` loaded.".format(self.config_filepath))
         return True
 
 
