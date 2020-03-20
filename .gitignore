@@ -4,6 +4,7 @@ tests/benchmark_encryptions.*
 # App Data
 config/*.db
 config/settings.json
+tests/test-config.json
 
 # Environments
 .env
