@@ -1,0 +1,45 @@
+[build-system]
+requires = ["briefcase"]
+
+[tool.briefcase]
+project_name = "BlackHole GUI Client"
+bundle = "site.wuamin.blackhole"
+version = "0.0.1"
+url = "https://blackhole.wuamin.site/blackholeguiclient"
+license = "BSD license"
+author = 'Amin Kharabian'
+author_email = "wuamin@gmail.com"
+
+[tool.briefcase.app.blackholeguiclient]
+formal_name = "BlackHole GUI Client"
+description = "BlackHole GUI Client"
+icon = "src/blackholeguiclient/resources/blackholeguiclient"
+sources = ['src/blackholeguiclient']
+requires = []
+
+
+[tool.briefcase.app.blackholeguiclient.macOS]
+requires = [
+    'toga-cocoa>=0.3.0.dev18',
+]
+
+[tool.briefcase.app.blackholeguiclient.linux]
+requires = [
+    'toga-gtk>=0.3.0.dev18',
+]
+
+[tool.briefcase.app.blackholeguiclient.windows]
+requires = [
+    'toga-winforms>=0.3.0.dev18',
+]
+
+# Mobile deployments
+[tool.briefcase.app.blackholeguiclient.iOS]
+requires = [
+    'toga-iOS>=0.3.0.dev18',
+]
+
+[tool.briefcase.app.blackholeguiclient.android]
+requires = [
+    'toga-android>=0.3.0.dev18',
+]
