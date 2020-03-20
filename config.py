@@ -76,6 +76,7 @@ class Config:
         """ Generating some of config based on config.json """
         # TODO: Use list of admins instead of one ID
         self.DefaultChatID = self.core['bot']['chat_ids']['admins'][0]['id']
+
         # Update log config
         self.logger_core.setLevel(self.core['log']['core']['level'])
         self.logger_bot.setLevel(self.core['log']['bot']['level'])
@@ -99,7 +100,7 @@ class Config:
 
     def load(self):
         """ return true if loaded config successfully from disk"""
-        self.logger_core.debug("🕐 Loading config from `{}`".format(self.config_filepath))
+        # self.logger_core.debug("🕐 Loading config from `{}`".format(self.config_filepath))
         try:
             with open(self.config_filepath, 'r') as f:
                 data_j = json.load(f)
