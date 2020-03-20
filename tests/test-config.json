@@ -1,0 +1,45 @@
+{
+  "version": [
+    0,
+    5,
+    0
+  ],
+  "blackholes": [
+    {
+      "id": null,
+      "dirpath": "./Test-BlackHole",
+      "name": "Test-BlackHole",
+      "telegram_id": "-1001443564535"
+    }
+  ],
+  "core": {
+    "temp_dir": "./BH-TEMP",
+    "db_filename": "test-blackhole.db",
+    "blackhole_config_filename": ".__WBH__.json",
+    "blackhole_queue_dirname": ".WBH_QUEUE",
+    "bot": {
+      "api": "1121832409:AAGU3C6R5373VwzRr_SlWVTeBrdzHQVSFns",
+      "proxy": null,
+      "chat_ids": {
+        "admins": [
+          {
+            "id": 43082035,
+            "name": "WUAmin"
+          }
+        ],
+        "mods": [],
+        "users": []
+      }
+    },
+    "chunk_size": 1048576,
+    "path_check_interval": 3,
+    "log": {
+      "core": {
+        "level": 40
+      },
+      "bot": {
+        "level": 40
+      }
+    }
+  }
+}
