@@ -5,7 +5,7 @@ import datetime
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import noload, relationship, sessionmaker
 
 from config import config
 from wublackhole.wbh_item import WBHChunk, WBHItem
@@ -69,6 +69,7 @@ class WBHDatabase:
 
         id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
         msg_id = Column(BigInteger)
+        file_id = Column(String)
         filename = Column(String)
         size = Column(BigInteger)
         index = Column(BigInteger)
@@ -101,9 +102,27 @@ class WBHDatabase:
             self.Base.metadata.create_all(self.engine)
 
 
-    def get_blackhole(self, name: str):
+    def get_blackhole_by_name(self, name: str):
         session = self.Session()
-        return session.query(self.WBHDbBlackHoles).filter_by(name=name).first()
+        return session.query(self.WBHDbBlackHoles) \
+            .options(noload(self.WBHDbBlackHoles.items)) \
+            .filter_by(name=name) \
+            .first()
+
+
+    def get_blackhole_by_id(self, _id):
+        session = self.Session()
+        # return session.query(self.WBHDbBlackHoles).options(noload('items')).filter_by(id=_id).first()
+        return session.query(self.WBHDbBlackHoles).options(noload(self.WBHDbBlackHoles.items)).filter_by(id=_id).first()
+
+
+    def get_items_by_parent_id(self, blackhole_id, items_parent=None):
+        session = self.Session()
+        return session.query(self.WBHDbItems) \
+            .options(noload(self.WBHDbItems.items)) \
+            .options(noload(self.WBHDbItems.chunks)) \
+            .filter_by(blackhole_id=blackhole_id, parent_id=items_parent) \
+            .all()
 
 
     def add_blackhole(self, name: str, size: int, telegram_id: str):
@@ -190,6 +209,7 @@ class WBHDatabase:
             config.logger_core.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
             session = self.Session()
             new_chunk = self.WBHDbChunks(msg_id=chunk.msg_id,
+                                         file_id=chunk.file_id,
                                          filename=chunk.filename,
                                          size=chunk.size,
                                          index=chunk.index,
@@ -215,7 +235,11 @@ class WBHDatabase:
             session = self.Session()
 
             # Add/Commit item to database
-            item_db = session.query(self.WBHDbItems).filter_by(id=item_wbhi.db_id).first()
+            item_db = session.query(self.WBHDbItems) \
+                .options(noload(self.WBHDbItems.items)) \
+                .options(noload(self.WBHDbItems.chunks)) \
+                .filter_by(id=item_wbhi.db_id) \
+                .first()
             item_db.chunks_count = chunk_count
             session.commit()
             config.logger_core.debug(
@@ -223,6 +247,19 @@ class WBHDatabase:
         except Exception as e:
             config.logger_core.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
                                      .format(item_wbhi.full_path, str(e)))
+
+
+    def get_chunks_by_item_id(self, blackhole_id, item_id):
+        try:
+            config.logger_core.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
+            session = self.Session()
+            # get chunks from database
+            return session.query(self.WBHDbChunks) \
+                .filter_by(blackhole_id=blackhole_id, items_id=item_id) \
+                .all()
+        except Exception as e:
+            config.logger_core.error("  ❌ ERROR: Can not get chunks for item id `{}` on database:\n {}"
+                                     .format(item_id, str(e)))
 
 
     def __exit__(self, exc_type, exc_value, traceback):

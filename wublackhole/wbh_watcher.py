@@ -5,7 +5,9 @@ import os
 import shutil
 import time
 from pathlib import Path
+
 from config import config
+from wublackhole.helper import sizeof_fmt
 from wublackhole.wbh_item import QueueState, WBHItem
 
 
@@ -57,15 +59,27 @@ def print_contents(contents: list, parents: list = [], line_pre_txt=''):
     depth_space = len(parents) * 2 * ' '
     item: WBHItem
     for item in contents:
-        if os.path.isfile(item.full_path):
-            config.logger_core.info(f"{line_pre_txt}{depth_space}📄 {os.path.join(*parents, item.filename)}")
-        elif os.path.isdir(item.full_path):
-            config.logger_core.info(f"{line_pre_txt}{depth_space}📂 {os.path.join(*parents, item.filename)}")
-            print_contents(item.children, parents=item.parents, line_pre_txt=line_pre_txt)
-        elif os.path.islink(item.full_path):
-            config.logger_core.info(f"{line_pre_txt}{depth_space}🔗 {os.path.join(*parents, item.filename)}")
+        if item.is_dir:
+            msg = f"{line_pre_txt}{depth_space}📂 {os.path.join(*parents, item.filename)}"
+            msg += ", Size: {}".format(sizeof_fmt(item.size))
+            if hasattr(item, 'items_count'):
+                msg += ", Items: {}".format(item.items_count)
+                msg += ", ID: {}".format(item.id)
+            print(msg)
+            _parents = list(parents)
+            _parents.append(item.filename)
+            if hasattr(item, 'children'):
+                print_contents(item.children, parents=_parents, line_pre_txt=line_pre_txt)
+            elif hasattr(item, 'items'):
+                print_contents(item.items, parents=_parents, line_pre_txt=line_pre_txt)
         else:
-            config.logger_core.info(f"{line_pre_txt}{depth_space}O {os.path.join(*parents, item.filename)}")
+            msg = f"{line_pre_txt}{depth_space}📄 {os.path.join(*parents, item.filename)}"
+            msg += ", Size: {}".format(sizeof_fmt(item.size))
+            if hasattr(item, 'chunks_count'):
+                msg += ", Chunks: {}".format(item.chunks_count)
+                msg += ", ID: {}".format(item.id)
+            print(msg)
+
 
 
 def get_new_item_state(items: list, filename, size) -> tuple:
@@ -180,7 +194,7 @@ def move_to_queue(bh, item_wpi: WBHItem):
             config.logger_core.error(f"  ❌ ERROR: Can not move `{item_wpi.filename}` to queue directory:\n {str(e)}")
 
 
-def start_watch(bh):
+def start_watch(bh, run_counts: int = None):
     items = []
     while True:
         start_t = time.process_time()
@@ -221,5 +235,10 @@ def start_watch(bh):
         # Empty the Queue by sending to BlackHole
         bh.queue.process_queue(bh.telegram_id)
 
-        config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
-        time.sleep(config.core['path_check_interval'])
+        if run_counts:
+            run_counts -= 1
+            if run_counts <= 0:
+                break
+        else:
+            config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
+            time.sleep(config.core['path_check_interval'])

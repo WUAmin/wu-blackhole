@@ -31,7 +31,7 @@ class EncryptionType(Enum):
 
 class WBHChunk:
     def __init__(self, size, filename, index=-1, org_filename=None, org_fullpath=None, org_size=None,
-                 msg_id=None, state: QueueState = QueueState.INQUEUE, checksum: str = None,
+                 msg_id: int = None, file_id: str = None, state: QueueState = QueueState.INQUEUE, checksum: str = None,
                  checksum_type: ChecksumType = None, encryption: EncryptionType = EncryptionType.NONE,
                  encryption_data: str = None, parent_qid: int = None, parent_db_id=None, db_id=None):
         self.size = size
@@ -40,7 +40,8 @@ class WBHChunk:
         self.org_filename = org_filename
         self.org_fullpath = org_fullpath
         self.org_size = org_size
-        self.msg_id = msg_id
+        self.msg_id: int = msg_id
+        self.file_id: str = file_id
         self.state: QueueState = state
         self.checksum: str = checksum
         self.checksum_type: ChecksumType = checksum_type
@@ -59,6 +60,7 @@ class WBHChunk:
                 'org_fullpath': self.org_fullpath,
                 'org_size': self.org_size,
                 'msg_id': self.msg_id,
+                'file_id': self.file_id,
                 'state': self.state.name,
                 'checksum': self.checksum,
                 'checksum_type': self.checksum_type.name,
@@ -78,6 +80,7 @@ class WBHChunk:
                         org_fullpath=_dict['org_fullpath'],
                         org_size=_dict['org_size'],
                         msg_id=_dict['msg_id'],
+                        file_id=_dict['file_id'],
                         state=QueueState[_dict['state']],
                         checksum=_dict['checksum'],
                         checksum_type=ChecksumType[_dict['checksum_type']],

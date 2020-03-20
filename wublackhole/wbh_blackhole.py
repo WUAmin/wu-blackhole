@@ -19,7 +19,7 @@ class WBHBlackHole:
 
     def init_id(self):
         # Get/Create BlackHole from/in database
-        bh_id = config.Database.get_blackhole(self.name)
+        bh_id = config.Database.get_blackhole_by_name(self.name)
         if not bh_id:
             bh_id = config.Database.add_blackhole(self.name, -1, self.telegram_id)
         self.id: int = bh_id.id

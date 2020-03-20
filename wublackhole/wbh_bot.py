@@ -10,20 +10,21 @@ from telegram.ext import Updater
 from config import config
 from wublackhole.helper import sizeof_fmt
 from wublackhole.wbh_blackhole import WBHBlackHole
+from wublackhole.wbh_db import WBHDatabase
 from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
 from wublackhole.wbh_watcher import get_checksum_sha256
 
 
 class WBHTelegramBot:
     def __init__(self):
-        self.updater = Updater(token=config.core['bot']['api'], request_kwargs=config.core['bot']['proxy'],
-                               use_context=True)
-        # dispatcher = self.updater.dispatcher
-
         logging.getLogger('telegram.bot').setLevel(config.core['log']['bot']['level'])
         logging.getLogger('telegram.ext.dispatcher').setLevel(config.core['log']['bot']['level'])
         logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.connectionpool').setLevel(logging.ERROR)
         logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.util.retry').setLevel(logging.ERROR)
+
+        self.updater = Updater(token=config.core['bot']['api'], request_kwargs=config.core['bot']['proxy'],
+                               use_context=True)
+        # dispatcher = self.updater.dispatcher
 
         # Register /start
         # cmd_start_handler = CommandHandler('start', self.cmd_start)
@@ -74,6 +75,7 @@ class WBHTelegramBot:
                                                  parse_mode=telegram.ParseMode.MARKDOWN)
 
             cap_text += f"*MSGID_{res.message_id}*\n"
+            cap_text += f"*FILEID_{res.document.file_id}*\n"
             self.updater.bot.editMessageCaption(chat_id=telegram_id,
                                                 message_id=res.message_id,
                                                 caption=cap_text,
@@ -93,6 +95,7 @@ class WBHTelegramBot:
             if res is not None:
                 # == sent to bot without any problem ==
                 chunk.msg_id = res.message_id
+                chunk.file_id = res.document.file_id
                 chunk.state = QueueState.DONE
                 config.logger_bot.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
                 # Save queue
@@ -127,7 +130,7 @@ class WBHTelegramBot:
         return True
 
 
-    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole) -> list:
+    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole) -> bool:
         """ return True if all chunks sent successfully """
         is_all_successful = True
         if item_wbhi.chunks is None:
@@ -186,3 +189,12 @@ class WBHTelegramBot:
             is_all_successful = False
             config.logger_bot.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
         return is_all_successful
+
+
+    def get_chunk(self, chunk: WBHDatabase.WBHDbChunks, path_to_save: str):
+        try:
+            chunk_file = self.updater.bot.get_file(chunk.file_id)
+            chunk_file.download(path_to_save)
+        except Exception as e:
+            config.logger_bot.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
+                                    .format(chunk.index, chunk.filename, str(e)))

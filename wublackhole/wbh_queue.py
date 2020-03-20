@@ -5,7 +5,7 @@ import os
 import shutil
 
 from config import config
-from wublackhole.wbh_item import QueueState, WBHChunk, WBHItem, ChecksumType
+from wublackhole.wbh_item import ChecksumType, QueueState, WBHChunk, WBHItem
 from wublackhole.wbh_watcher import get_checksum_sha256_file, get_checksum_sha256_folder
 
 
@@ -242,16 +242,18 @@ class WBHQueue:
                             # Add all chunks to Database
                             chunk: WBHChunk
                             for chunk in item.chunks:
-                                if chunk.state == QueueState.UPLOADING:
+                                if chunk.state == QueueState.DONE:
                                     chunk.db_id = config.Database.add_chunk(chunk=chunk, blackhole_id=self.blackhole.id,
                                                                             parent_id=item.db_id)
-                                    chunk.state = QueueState.DONE
+                                    chunk.state = QueueState.DELETED
                             # Remove file
                             os.remove(item.full_path)
                             item.state = QueueState.DELETED
                             config.logger_core.debug("✅ `{}` removed from disk.".format(item.filename))
                             # Save Queue to disk
                             self.save()
+                            # Update chunks_count
+                            config.Database.update_item_chunk_count(item_wbhi=item, chunk_count=len(item.chunks))
                     except Exception as e:
                         config.logger_core.error(
                             "❌ ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
