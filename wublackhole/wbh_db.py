@@ -102,6 +102,12 @@ class WBHDatabase:
             self.Base.metadata.create_all(self.engine)
 
 
+    def get_blackholes(self):
+        session = self.Session()
+        return session.query(self.WBHDbBlackHoles) \
+            .options(noload(self.WBHDbBlackHoles.items)) \
+            .all()
+
     def get_blackhole_by_name(self, name: str):
         session = self.Session()
         return session.query(self.WBHDbBlackHoles) \
