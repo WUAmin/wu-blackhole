@@ -8,7 +8,7 @@
       "name": "Run",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/WuTeleForwardBot.py",
+      "program": "${workspaceFolder}/WuBlackHole.py",
       "args": [],
       "console": "integratedTerminal",
       // "envFile": "${workspaceFolder}/venv/linux",
