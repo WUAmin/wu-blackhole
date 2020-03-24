@@ -2,7 +2,7 @@ import os
 import time
 
 from wublackhole.helper import create_random_content_file, sizeof_fmt
-from wublackhole.wbh_watcher import get_checksum_sha256_file
+from wublackhole.helper import get_checksum_sha256_file
 
 
 # Config
