@@ -1,4 +1,5 @@
 {
+  "explorer.sortOrder": "foldersFirst",
   // "python.sortImports.path": "venv/linux/bin/python"
   "python.venvpath": "${workspaceFolder}/venv/l3.7"
 }
