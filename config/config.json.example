@@ -15,6 +15,7 @@
   "core": {
     "temp_dir": ".temp",
     "db_filename": "wbh.db",
+    "backup_pass": "PASSWORD-TO-RECOVER-DATABASE-FILE-BLACKHOLE",
     "blackhole_config_filename": ".__WBH__.json",
     "blackhole_queue_dirname": ".WBH_QUEUE",
     "bot": {
