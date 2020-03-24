@@ -3,7 +3,7 @@ tests/benchmark_encryptions.*
 
 # App Data
 config/*.db
-config/settings.json
+config/config.json
 tests/test-config.json
 
 # Environments
@@ -22,6 +22,7 @@ tg/
 
 # IDE
 .idea/
+*.code-workspace
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -146,3 +147,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /config/config.json
+config.py
