@@ -7,12 +7,12 @@ from datetime import datetime
 import telegram  # pip install python-telegram-bot --upgrade
 from telegram.ext import Updater
 
+from wublackhole.helper import chacha20poly1305_encrypt_data, get_checksum_sha256
 # from config import config
 from wublackhole.helper import sizeof_fmt
 from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_db import WBHDatabase
 from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
-from wublackhole.helper import get_checksum_sha256
 
 
 class WBHTelegramBot:
@@ -108,29 +108,30 @@ class WBHTelegramBot:
                 self.logger.error(
                     "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
 
+    #
+    # def send_folder(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str):
+    #     """ return True on successfully sending all chunks of all items in the directory"""
+    #     # org_filepath_rel = org_filepath[len(config.core['temp_dir']):]
+    #     org_filepath_rel = os.path.join(*item_wbhi.parents, item_wbhi.filename)
+    #     print(f"🕑 Sending directory `{org_filepath_rel}`...")
+    #     try:
+    #         # Send all items in the directory
+    #         itm: WBHItem
+    #         for itm in item_wbhi.children:
+    #             if itm.is_dir:
+    #                 # Directory
+    #                 self.send_folder(itm, blackhole, chunk_size, temp_dir)
+    #             else:
+    #                 # File
+    #                 self.send_file(item_wbhi=itm, blackhole=blackhole, chunk_size=chunk_size, temp_dir=temp_dir)
+    #     except Exception as e:
+    #         print(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
+    #         return False
+    #     return True
 
-    def send_folder(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str):
-        """ return True on successfully sending all chunks of all items in the directory"""
-        # org_filepath_rel = org_filepath[len(config.core['temp_dir']):]
-        org_filepath_rel = os.path.join(*item_wbhi.parents, item_wbhi.filename)
-        print(f"🕑 Sending directory `{org_filepath_rel}`...")
-        try:
-            # Send all items in the directory
-            itm: WBHItem
-            for itm in item_wbhi.children:
-                if itm.is_dir:
-                    # Directory
-                    self.send_folder(itm, blackhole, chunk_size, temp_dir)
-                else:
-                    # File
-                    self.send_file(itm, blackhole, chunk_size, temp_dir)
-        except Exception as e:
-            print(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
-            return False
-        return True
 
-
-    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str) -> bool:
+    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str,
+                  encryption_type: EncryptionType = EncryptionType.NONE, encryption_secret: str = None) -> bool:
         """ return True if all chunks sent successfully """
         is_all_successful = True
         if item_wbhi.chunks is None:
@@ -149,23 +150,32 @@ class WBHTelegramBot:
                 while True:
                     # Read a chunk
                     chunk_bytes = org_file.read(chunk_size)
-                    chunk_filename = "WBHTF{}.p{:04d}".format(datetime.today().strftime('%Y%m%d%H%M%S%f'), chunk_i)
-                    chunk = WBHChunk(size=len(chunk_bytes),
-                                     filename=chunk_filename,
-                                     index=chunk_i,
-                                     org_filename=os.path.split(item_wbhi.full_path)[1],
-                                     org_fullpath=os.path.join(temp_dir, chunk_filename),
-                                     org_size=os.fstat(org_file.fileno()).st_size,
-                                     msg_id=None,
-                                     state=QueueState.UPLOADING,
-                                     checksum=get_checksum_sha256(chunk_bytes),
-                                     checksum_type=ChecksumType.SHA256,
-                                     encryption=EncryptionType.NONE,
-                                     encryption_data=None,
-                                     parent_qid=item_wbhi.parent_qid,
-                                     parent_db_id=item_wbhi.db_id)
-                    self.logger.debug("  🕑 Read {}".format(sizeof_fmt(chunk.size)))
                     if chunk_bytes:
+                        # Check Encryption
+                        encryption_data = None
+                        if encryption_type == EncryptionType.ChaCha20Poly1305:
+                            # Encrypt chunk data
+                            self.logger.debug("🕑 Encrypting chunk using ChaCha20Poly1305 ...")
+                            chunk_bytes, key, nonce = chacha20poly1305_encrypt_data(data=chunk_bytes,
+                                                                                    secret=encryption_secret.encode())
+                            encryption_data = '{}O{}'.format(key.hex(), nonce.hex())
+
+                        chunk_filename = "WBHTF{}.p{:04d}".format(datetime.today().strftime('%Y%m%d%H%M%S%f'), chunk_i)
+                        chunk = WBHChunk(size=len(chunk_bytes),
+                                         filename=chunk_filename,
+                                         index=chunk_i,
+                                         org_filename=os.path.split(item_wbhi.full_path)[1],
+                                         org_fullpath=os.path.join(temp_dir, chunk_filename),
+                                         org_size=os.fstat(org_file.fileno()).st_size,
+                                         msg_id=None,
+                                         state=QueueState.UPLOADING,
+                                         checksum=get_checksum_sha256(chunk_bytes),
+                                         checksum_type=ChecksumType.SHA256,
+                                         encryption=encryption_type,
+                                         encryption_data=encryption_data,
+                                         parent_qid=item_wbhi.parent_qid,
+                                         parent_db_id=item_wbhi.db_id)
+                        self.logger.debug("  🕑 Read {}".format(sizeof_fmt(chunk.size)))
                         try:
                             # Open chunk file to write
                             with open(chunk.org_fullpath, 'wb') as chunk_file_w:
@@ -190,6 +200,10 @@ class WBHTelegramBot:
             self.logger.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
         return is_all_successful
 
+    def send_msg(self, chat_id, text, parse_mode=telegram.ParseMode.MARKDOWN):
+        return self.updater.bot.send_message(chat_id=chat_id,
+                                                    text=text,
+                                                    parse_mode=parse_mode)
 
     def get_chunk(self, chunk: WBHDatabase.WBHDbChunks, path_to_save: str):
         try:

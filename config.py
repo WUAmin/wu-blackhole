@@ -12,12 +12,13 @@ class Config:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [0, 7, 0]
+        self.version: list = [0, 9, 0]
 
         # Load from config.json
         self.core: dict = {
             "temp_dir": os.path.join(tempfile.gettempdir(), "WBH-temp"),
             "db_filename": "wbh.db",
+            "backup_pass": os.urandom(16).hex(),
             "blackhole_config_filename": ".__WBH__.json",
             "blackhole_queue_dirname": ".WBH_QUEUE",
             "bot": {
@@ -51,6 +52,7 @@ class Config:
         self.BlackHoles: list = []
         self.TelegramBot: wublackhole.wbh_bot.WBHTelegramBot = None
         self.config_filepath = None
+        self.need_backup: bool = False
 
         # create logger with 'blackhole_core'
         console = logging.StreamHandler()
@@ -110,10 +112,7 @@ class Config:
                 # Check BlackHoles
                 self.BlackHoles = list()
                 for blackhole in data_j['blackholes']:
-                    self.BlackHoles.append(
-                        wublackhole.wbh_blackhole.WBHBlackHole(dirpath=blackhole['dirpath'], name=blackhole['name'],
-                                                               telegram_id=blackhole['telegram_id'],
-                                                               _id=blackhole['id']))
+                    self.BlackHoles.append(wublackhole.wbh_blackhole.WBHBlackHole.from_dict(blackhole))
                 self.init_config()
         except Exception as e:
             self.logger_core.error(

@@ -93,16 +93,18 @@ class WBHDatabase:
 
     def __init__(self, db_path, logger: logging.Logger, echo=False):
         self.logger = logger
-        # self.db_path = db_path
+        self._db_path = db_path
 
         # Check existance of db variable
         if 'engine' not in locals():
             # initialize a database
-            self.engine = create_engine('sqlite:///' + db_path, echo=echo)
+            self.engine = create_engine('sqlite:///' + self._db_path, echo=echo)
             self.conn = self.engine.connect()
             self.Session = sessionmaker(bind=self.engine)
             self.Base.metadata.create_all(self.engine)
 
+    def get_db_filepath(self):
+        return self._db_path
 
     def get_blackholes(self):
         session = self.Session()

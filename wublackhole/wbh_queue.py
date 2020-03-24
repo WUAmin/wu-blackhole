@@ -3,10 +3,12 @@
 import json
 import os
 import shutil
+from datetime import datetime
 
 from config import config
-from wublackhole.wbh_item import ChecksumType, QueueState, WBHChunk, WBHItem
-from wublackhole.helper import get_checksum_sha256_file, get_checksum_sha256_folder
+from wublackhole.helper import chacha20poly1305_encrypt_data, compress_bytes_to_string_b64zlib, \
+    get_checksum_sha256_file, get_checksum_sha256_folder
+from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
 
 
 class WBHQueue:
@@ -210,13 +212,16 @@ class WBHQueue:
                         self.save()
                     except Exception as e:
                         config.logger_core.error("❌ ERROR: Could add item `{}` to Database: {}"
-                                             .format(item.filename, str(e)))
+                                                 .format(item.filename, str(e)))
                 if item.state == QueueState.UPLOADING:
                     try:
                         everything_is_done = False
                         # Send File to blackhole
-                        if config.TelegramBot.send_file(item, self.blackhole, config.core['chunk_size'],
-                                                        config.core['temp_dir']):
+                        if config.TelegramBot.send_file(item_wbhi=item, blackhole=self.blackhole,
+                                                        chunk_size=config.core['chunk_size'],
+                                                        temp_dir=config.core['temp_dir'],
+                                                        encryption_type=self.blackhole.encryption_type,
+                                                        encryption_secret=self.blackhole.encryption_pass):
                             config.logger_core.debug("✅ Sent `{}` to BlackHole.".format(item.filename))
                             # Update item state and db_id
                             item.state = QueueState.DONE
@@ -240,7 +245,7 @@ class WBHQueue:
                                 config.TelegramBot.send_chunk_file(chunk=chunk, blackhole=self.blackhole)
                                 # Save Queue to disk
                                 self.save()
-                        if all_chunks_done: # If all there is no chunk with UPLOADING state
+                        if all_chunks_done:  # If all there is no chunk with UPLOADING state
                             # Add all chunks to Database
                             chunk: WBHChunk
                             for chunk in item.chunks:
@@ -268,10 +273,7 @@ class WBHQueue:
 
         # Backup Database to blackhole
         if len(items) == 0 and config.need_backup:
-            config.logger_core.debug("🕑 Sending database backup to blackhole...")
-
-            config.need_backup = False
-
+            config.need_backup = not self.backup_database()
 
         return everything_is_done
 
@@ -279,3 +281,54 @@ class WBHQueue:
     def process_queue(self, telegram_id: str):
         """ Empty queue by sending items to BlackHole """
         return self.process_queue_list(telegram_id, self.items)
+
+
+    def backup_database(self):
+        config.logger_core.debug("🕑 Sending database backup to blackhole...")
+        try:
+            db_root_path, db_filename = os.path.split(config.Database.get_db_filepath())
+            # Create a new WBHItem for database backup
+            db_wbhi: WBHItem = WBHItem(size=os.stat(config.Database.get_db_filepath()).st_size,
+                                       full_path=config.Database.get_db_filepath(),
+                                       root_path=db_root_path,
+                                       filename=db_filename,
+                                       is_dir=False,
+                                       state=QueueState.UPLOADING,
+                                       modified_at=os.path.getmtime(config.Database.get_db_filepath()),
+                                       created_at=os.path.getctime(config.Database.get_db_filepath()),
+                                       checksum=get_checksum_sha256_file(config.Database.get_db_filepath()),
+                                       checksum_type=ChecksumType.SHA256)
+            # Send Database backup to blackhole
+            if config.TelegramBot.send_file(item_wbhi=db_wbhi,
+                                            blackhole=self.blackhole,
+                                            chunk_size=config.core['chunk_size'],
+                                            temp_dir=config.core['temp_dir'],
+                                            encryption_type=EncryptionType.ChaCha20Poly1305,
+                                            encryption_secret=config.core['backup_pass']):
+                # combine all chunks checksum,encryption and file_id to string
+                db_chunks = []
+                db_c: WBHChunk
+                for db_c in db_wbhi.chunks:
+                    db_chunks.append('I'.join(
+                        [db_c.encryption.name, db_c.encryption_data, db_c.checksum_type.name, db_c.checksum,
+                         db_c.file_id]))
+                raw_db_backup_data = 'G'.join(db_chunks).encode()
+                # Encrypt raw_db_backup_data with backup_pass in blackhole section of config
+                encrypted_data, key, nonce = chacha20poly1305_encrypt_data(data=raw_db_backup_data,
+                                                                           secret=config.core['backup_pass'].encode())
+                # Combine encrpyted data with key and nonce of chacha20poly1305
+                backup_string = compress_bytes_to_string_b64zlib(key + nonce + encrypted_data)
+                # limit sending string to 4000 characters
+                str_parts = [backup_string[i:i + 4000] for i in range(0, len(backup_string), 4000)]
+                for sp in str_parts:
+                    # Send backup_string as a normal message with #WBHBackup tag
+                    config.TelegramBot.send_msg(chat_id=self.blackhole.telegram_id,
+                                                text="{}\nb64zlib\n```{}```\n#WBHBackup"
+                                                .format(datetime.today().strftime('%Y-%m-%d %H:%M:%S'), sp))
+                return True
+            else:
+                config.logger_core.error("❌ ERROR: Could send encrypted database backup  to BlackHole!!!")
+        except Exception as e:
+            config.logger_core.error(
+                "❌ ERROR: Could send encrypted database backup  to BlackHole: ", str(e))
+        return False

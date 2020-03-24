@@ -1,7 +1,13 @@
 # wu-blackhole
-A [Telegram Bot](https://github.com/python-telegram-bot/python-telegram-bot) than upload file/folders to a [Telegram](https://telegram.org/) Channel. No matter the file/folder size, it will be fragmented and mapped into a [SQLite](https://www.sqlite.org) Database for retrieval via [Flask](https://palletsprojects.com/p/flask/)\/[Vue.js](https://vuejs.org/)
+A [Telegram Bot](https://github.com/python-telegram-bot/python-telegram-bot) 
+than upload file/folders to a [Telegram](https://telegram.org/) Channel. 
+No matter the file/folder size, it will be fragmented and mapped into a 
+[SQLite](https://www.sqlite.org) Database for retrieval via 
+[PyQt5](https://pypi.org/project/PyQt5/)/[PySide2](https://pypi.org/project/PySide2/) Client (~~[Flask](https://palletsprojects.com/p/flask/)\/[Vue.js](https://vuejs.org/)~~)
 
-
+After emptying queue, a encrypted backup of database will be uploaded to the blackhole. 
+to update client's database, you can copy/past code in the last message with tag of #WBHBackup. 
+Client with ask for `backup_pass` and download, decrypt and update your database. 
 
 ## Temp for final doc
 

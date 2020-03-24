@@ -4,14 +4,18 @@ import json
 import os
 
 from config import config
+from wublackhole.wbh_item import EncryptionType
 from wublackhole.wbh_queue import WBHQueue
 
 
 class WBHBlackHole:
-    def __init__(self, dirpath: str, name: str, telegram_id: int = None, _id: int = None):
+    def __init__(self, dirpath: str, name: str, telegram_id: int = None, _id: int = None,
+                 encryption_type: EncryptionType = EncryptionType.NONE, encryption_pass: str = None):
         self.dirpath: str = dirpath
         self.name = name
         self.telegram_id = telegram_id
+        self.encryption_type = encryption_type
+        self.encryption_pass = encryption_pass
         # Create/Load Queue from disk
         self.queue = WBHQueue(os.path.join(self.dirpath, config.core['blackhole_queue_dirname'], 'queue.json'), self)
         self.id: int = _id
@@ -26,18 +30,22 @@ class WBHBlackHole:
 
 
     def to_dict(self):
-        return {'ID': self.id,
-                'FullPath': self.dirpath,
-                'Name': self.name,
-                'TelegramID': self.telegram_id}
+        return {'id': self.id,
+                'dirpath': self.dirpath,
+                'name': self.name,
+                'telegram_id': self.telegram_id,
+                'encryption_type': self.encryption_type.name,
+                'encryption_pass': self.encryption_pass}
 
 
     @staticmethod
     def from_dict(_dict):
-        return WBHBlackHole(_id=_dict['ID'],
-                            fullpath=_dict['FullPath'],
-                            name=_dict['Name'],
-                            telegram_id=_dict['TelegramID'])
+        return WBHBlackHole(_id=_dict['id'],
+                            dirpath=_dict['dirpath'],
+                            name=_dict['name'],
+                            telegram_id=_dict['telegram_id'],
+                            encryption_type=EncryptionType[_dict['encryption_type']],
+                            encryption_pass=_dict['encryption_pass'])
 
 
     def save(self):

@@ -16,17 +16,17 @@ class QueueState(Enum):
 
 class ChecksumType(Enum):
     NONE = 0
-    MD5 = 10
-    SHA1 = 20
+    # MD5 = 10
+    # SHA1 = 20
     SHA256 = 30
-    SHA512 = 40
+    # SHA512 = 40
 
 
 class EncryptionType(Enum):
     NONE = 0
     ChaCha20Poly1305 = 10
-    FERNET_SHA256 = 20
-    AES_SHA256 = 30
+    # FERNET_SHA256 = 20
+    # AES_SHA256 = 30
 
 
 class WBHChunk:

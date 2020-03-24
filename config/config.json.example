@@ -1,7 +1,7 @@
 {
   "version": [
     0,
-    7,
+    9,
     0
   ],
   "blackholes": [
@@ -9,7 +9,9 @@
       "id": null,
       "dirpath": "BLACKHOLE-DIRECTORY-PATH",
       "name": "BLACKHOLE-NAME (changing name, create a new blackhole in database)",
-      "telegram_id": "-1"
+      "telegram_id": "-1",
+      "encryption_type": "NONE or ChaCha20Poly1305",
+      "encryption_pass": "PASSWORD-TO-RECOVER-YOUR-FILES"
     }
   ],
   "core": {
