@@ -23,6 +23,8 @@ tg/
 # IDE
 .idea/
 *.code-workspace
+*.user
+*.autosave
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
