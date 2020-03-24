@@ -2,16 +2,31 @@ import base64
 import os
 import time
 
+from wublackhole.helper import create_random_content_file, get_checksum_sha256_file, sizeof_fmt
+
+
+# Config
+test_filename = "checksum_file.tmp"
+test_filepath = os.path.join(os.path.split(__file__)[0], test_filename)
+test_file_size = 48 * 1024 * 1024  # 48MB
+password_provided = "8mwHncKVXalaBAIe"  # This is input in the form of a string
+
+# Create Test file
+start_t = time.process_time()
+create_random_content_file(test_filepath, test_file_size)
+elapsed_t = time.process_time() - start_t
+print("Create a {} test file in {:06f} secs...".format(sizeof_fmt(test_file_size), elapsed_t))
+test_file_checksum = get_checksum_sha256_file(test_filename)
+
+# ====  hazmat/Fernet ====
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
-test_filename = "Test-File-01.mkv"
-test_filepath = os.path.join(os.path.split(__file__)[0], test_filename)
-
-password_provided = "8mwHncKVXalaBAIe"  # This is input in the form of a string
+encrypted_test_filepath = test_filename + ".hazmat-fernet"
+decrypted_test_filepath = test_filename + ".hazmat-fernet.decrypt"
 password = password_provided.encode()  # Convert to type bytes
 # salt = b'salt_' # CHANGE THIS - recommend using a key from os.urandom(16), must be of type bytes
 salt = os.urandom(16)
@@ -23,40 +38,47 @@ kdf = PBKDF2HMAC(
     backend=default_backend()
 )
 fernet_key = base64.urlsafe_b64encode(kdf.derive(password))  # Can only use kdf once
-
-print("Input Size: {}  ({} MB)".format(os.stat(input_file).st_size, os.stat(input_file).st_size / 1024 / 1024))
-
-# ====  hazmat/Fernet ====
+print("Input Size: {}  ({} MB)".format(os.stat(test_filename).st_size, os.stat(test_filename).st_size / 1024 / 1024))
 start_t = time.process_time()
-with open(input_file, 'rb') as f:
+with open(test_filename, 'rb') as f:
     data = f.read()
 fernet = Fernet(fernet_key)
 encrypted = fernet.encrypt(data)
-with open(input_file + ".hazmat-fernet", 'wb') as f:
+with open(encrypted_test_filepath, 'wb') as f:
     f.write(encrypted)
 elapsed_t = time.process_time() - start_t
 print("Encrypt - hazmat/Fernet:     {:06f} secs...".format(elapsed_t))
 
 start_t = time.process_time()
-with open(input_file + ".hazmat-fernet", 'rb') as f:
+with open(encrypted_test_filepath, 'rb') as f:
     data = f.read()
 fernet = Fernet(fernet_key)
 encrypted = fernet.decrypt(data)
-with open(input_file + ".hazmat-fernet.mkv", 'wb') as f:
+with open(decrypted_test_filepath, 'wb') as f:
     f.write(encrypted)
 elapsed_t = time.process_time() - start_t
 print("Decrypt - hazmat/Fernet:     {:06f} secs...".format(elapsed_t))
+decrypt_file_checksum = get_checksum_sha256_file(decrypted_test_filepath)
+if test_file_checksum == decrypt_file_checksum:
+    print("Checksum matches.")
+else:
+    print("ERROR: Mismatch checksum after encrypt/decrypt.")
+os.remove(encrypted_test_filepath)
+os.remove(decrypted_test_filepath)
+print("\n\n")
 
 # ==== hazmat/ChaCha20Poly1305 ====
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
 
-nonce = os.urandom(12)
-key = ChaCha20Poly1305.generate_key()
+encrypted_test_filepath = test_filename + ".ChaCha20Poly1305"
+decrypted_test_filepath = test_filename + ".ChaCha20Poly1305.decrypt"
 
+key = ChaCha20Poly1305.generate_key()
+nonce = os.urandom(12)
 start_t = time.process_time()
-with open(input_file, 'rb') as f_i:
-    with open(input_file + ".ChaCha20Poly1305", 'wb') as f_o:
+with open(test_filename, 'rb') as f_i:
+    with open(encrypted_test_filepath, 'wb') as f_o:
         data = f_i.read()
         chacha = ChaCha20Poly1305(key)
         encrypted = chacha.encrypt(nonce, data, password)
@@ -67,8 +89,8 @@ print("Encrypt - hazmat/ChaCha20Poly1305:     {:06f} secs...".format(elapsed_t))
 print(f"{nonce.hex()},{key.hex()}")
 
 start_t = time.process_time()
-with open(input_file + ".ChaCha20Poly1305", 'rb') as f_i:
-    with open(input_file + ".ChaCha20Poly1305.mkv", 'wb') as f_o:
+with open(encrypted_test_filepath, 'rb') as f_i:
+    with open(decrypted_test_filepath, 'wb') as f_o:
         data = f_i.read()
         chacha = ChaCha20Poly1305(key)
         # encrypted = chacha.encrypt(nonce, data, password)
@@ -76,23 +98,34 @@ with open(input_file + ".ChaCha20Poly1305", 'rb') as f_i:
         f_o.write(decrypted)
 elapsed_t = time.process_time() - start_t
 print("Decrypt - hazmat/ChaCha20Poly1305:     {:06f} secs...".format(elapsed_t))
+decrypt_file_checksum = get_checksum_sha256_file(decrypted_test_filepath)
+if test_file_checksum == decrypt_file_checksum:
+    print("Checksum matches.")
+else:
+    print("ERROR: Mismatch checksum after encrypt/decrypt.")
+os.remove(encrypted_test_filepath)
+os.remove(decrypted_test_filepath)
+print("\n\n")
 
 # ==== pycrypto - AES ====
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES  # pip3 install pycrypto
 from Crypto.Hash import SHA256
 from Crypto import Random
 
+
+encrypted_test_filepath = test_filename + ".AES"
+decrypted_test_filepath = test_filename + ".AES.decrypt"
 
 hasher = SHA256.new(password_provided.encode('utf-8'))
 aes_key = hasher.digest()
 start_t = time.process_time()
 
 chunksize = 64 * 1024
-filesize = str(os.path.getsize(input_file)).zfill(16)
+filesize = str(os.path.getsize(test_filename)).zfill(16)
 IV = Random.new().read(16)
 encryptor = AES.new(aes_key, AES.MODE_CBC, IV)
-with open(input_file, 'rb') as infile:
-    with open(input_file + ".AES", 'wb') as outfile:
+with open(test_filename, 'rb') as infile:
+    with open(encrypted_test_filepath, 'wb') as outfile:
         outfile.write(filesize.encode('utf-8'))
         outfile.write(IV)
 
@@ -105,3 +138,5 @@ with open(input_file, 'rb') as infile:
             outfile.write(encryptor.encrypt(chunk))
 elapsed_t = time.process_time() - start_t
 print("Encrypt - AES:     {:06f} secs...".format(elapsed_t))
+os.remove(encrypted_test_filepath)
+# os.remove(decrypted_test_filepath)
