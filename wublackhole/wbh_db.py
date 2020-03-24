@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import datetime
+import logging
 
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import noload, relationship, sessionmaker
 
-from config import config
+# from config import config
 from wublackhole.wbh_item import WBHChunk, WBHItem
 
 
@@ -90,7 +91,8 @@ class WBHDatabase:
             return f'WBHDbChunks {self.filename}'
 
 
-    def __init__(self, db_path, echo=False):
+    def __init__(self, db_path, logger: logging.Logger, echo=False):
+        self.logger = logger
         # self.db_path = db_path
 
         # Check existance of db variable
@@ -151,7 +153,7 @@ class WBHDatabase:
             else:
                 self.add_item(item, blackhole_id, parent_item)
         except Exception as e:
-            config.logger_core.error(
+            self.logger.error(
                 "  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
 
 
@@ -159,7 +161,7 @@ class WBHDatabase:
         """ return id of item in database if successful, None on error"""
         new_item = None
         try:
-            config.logger_core.debug("🕐 Adding item `{}` to Database".format(item_wbhi.filename))
+            self.logger.debug("🕐 Adding item `{}` to Database".format(item_wbhi.filename))
             session = self.Session()
             new_item = self.WBHDbItems(filename=item_wbhi.filename,
                                        is_dir=item_wbhi.is_dir,
@@ -182,9 +184,9 @@ class WBHDatabase:
             # Add/Commit item to database
             session.add(new_item)
             session.commit()
-            config.logger_core.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
+            self.logger.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
         except Exception as e:
-            config.logger_core.error(
+            self.logger.error(
                 "  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
 
         # if not item_wbhi.is_dir:
@@ -203,7 +205,7 @@ class WBHDatabase:
         #             session.add(new_ch)
         #         session.commit()
         #     except Exception as e:
-        #         config.logger_core.error("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}"
+        #         self.logger.error("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}"
         #                                  .format(item_wbhi.full_path, str(e)))
         return new_item.id if new_item else None
 
@@ -212,7 +214,7 @@ class WBHDatabase:
         """ return id of chunk in database if successful, None on error"""
         new_chunk = None
         try:
-            config.logger_core.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
+            self.logger.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
             session = self.Session()
             new_chunk = self.WBHDbChunks(msg_id=chunk.msg_id,
                                          file_id=chunk.file_id,
@@ -228,16 +230,16 @@ class WBHDatabase:
             # Add/Commit chunk to database
             session.add(new_chunk)
             session.commit()
-            config.logger_core.debug("✅ chunk#{} of `{}` added to Database.".format(chunk.index, chunk.org_filename))
+            self.logger.debug("✅ chunk#{} of `{}` added to Database.".format(chunk.index, chunk.org_filename))
         except Exception as e:
-            config.logger_core.error(
+            self.logger.error(
                 "  ❌ ERROR: Can not add  chunk#{} of `{}` to database:\n {}".format(chunk.index, chunk.org_filename, str(e)))
         return new_chunk.id if new_chunk else None
 
 
     def update_item_chunk_count(self, item_wbhi: WBHItem, chunk_count):
         try:
-            config.logger_core.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
+            self.logger.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
             session = self.Session()
 
             # Add/Commit item to database
@@ -248,23 +250,23 @@ class WBHDatabase:
                 .first()
             item_db.chunks_count = chunk_count
             session.commit()
-            config.logger_core.debug(
+            self.logger.debug(
                 "✅ chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
         except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
+            self.logger.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
                                      .format(item_wbhi.full_path, str(e)))
 
 
     def get_chunks_by_item_id(self, blackhole_id, item_id):
         try:
-            config.logger_core.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
+            self.logger.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
             session = self.Session()
             # get chunks from database
             return session.query(self.WBHDbChunks) \
                 .filter_by(blackhole_id=blackhole_id, items_id=item_id) \
                 .all()
         except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not get chunks for item id `{}` on database:\n {}"
+            self.logger.error("  ❌ ERROR: Can not get chunks for item id `{}` on database:\n {}"
                                      .format(item_id, str(e)))
 
 

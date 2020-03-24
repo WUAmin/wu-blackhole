@@ -7,23 +7,23 @@ from datetime import datetime
 import telegram  # pip install python-telegram-bot --upgrade
 from telegram.ext import Updater
 
-from config import config
+# from config import config
 from wublackhole.helper import sizeof_fmt
 from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_db import WBHDatabase
 from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
-from wublackhole.wbh_watcher import get_checksum_sha256
+from wublackhole.helper import get_checksum_sha256
 
 
 class WBHTelegramBot:
-    def __init__(self):
-        logging.getLogger('telegram.bot').setLevel(config.core['log']['bot']['level'])
-        logging.getLogger('telegram.ext.dispatcher').setLevel(config.core['log']['bot']['level'])
+    def __init__(self, api, logger: logging.Logger, proxy=None, log_level=logging.INFO):
+        self.logger = logger
+        logging.getLogger('telegram.bot').setLevel(log_level)
+        logging.getLogger('telegram.ext.dispatcher').setLevel(log_level)
         logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.connectionpool').setLevel(logging.ERROR)
         logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.util.retry').setLevel(logging.ERROR)
 
-        self.updater = Updater(token=config.core['bot']['api'], request_kwargs=config.core['bot']['proxy'],
-                               use_context=True)
+        self.updater = Updater(token=api, request_kwargs=proxy, use_context=True)
         # dispatcher = self.updater.dispatcher
 
         # Register /start
@@ -82,7 +82,7 @@ class WBHTelegramBot:
                                                 timeout=40,
                                                 parse_mode=telegram.ParseMode.MARKDOWN)
         except Exception as e:
-            config.logger_bot.error("❌ Error  _send_chunk : %s" % str(e))
+            self.logger.error("❌ Error  _send_chunk : %s" % str(e))
         return res
 
 
@@ -97,19 +97,19 @@ class WBHTelegramBot:
                 chunk.msg_id = res.message_id
                 chunk.file_id = res.document.file_id
                 chunk.state = QueueState.DONE
-                config.logger_bot.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
+                self.logger.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
                 # Save queue
                 blackhole.queue.save()
                 # Remove chunk file
                 os.remove(chunk.org_fullpath)
-                config.logger_bot.debug(f"  🕘 `{chunk.filename}` file removed.")
+                self.logger.debug(f"  🕘 `{chunk.filename}` file removed.")
             else:
                 # == There was a problem ==
-                config.logger_bot.error(
+                self.logger.error(
                     "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
 
 
-    def send_folder(self, item_wbhi: WBHItem, blackhole: WBHBlackHole):
+    def send_folder(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str):
         """ return True on successfully sending all chunks of all items in the directory"""
         # org_filepath_rel = org_filepath[len(config.core['temp_dir']):]
         org_filepath_rel = os.path.join(*item_wbhi.parents, item_wbhi.filename)
@@ -120,17 +120,17 @@ class WBHTelegramBot:
             for itm in item_wbhi.children:
                 if itm.is_dir:
                     # Directory
-                    self.send_folder(itm, blackhole)
+                    self.send_folder(itm, blackhole, chunk_size, temp_dir)
                 else:
                     # File
-                    self.send_file(itm, blackhole)
+                    self.send_file(itm, blackhole, chunk_size, temp_dir)
         except Exception as e:
             print(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
             return False
         return True
 
 
-    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole) -> bool:
+    def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str) -> bool:
         """ return True if all chunks sent successfully """
         is_all_successful = True
         if item_wbhi.chunks is None:
@@ -139,22 +139,22 @@ class WBHTelegramBot:
         # Prepare original filename
         org_fullpath = os.path.join(*item_wbhi.parents, item_wbhi.filename)
         chunk_i = len(item_wbhi.chunks)
-        config.logger_bot.debug("🕑 Sending file `{}` in chunks of {}"
-                                .format(org_fullpath, sizeof_fmt(config.core['chunk_size'])))
+        self.logger.debug("🕑 Sending file `{}` in chunks of {}"
+                          .format(org_fullpath, sizeof_fmt(chunk_size)))
         try:
             # Open Original File
             with open(item_wbhi.full_path, 'rb') as org_file:
                 # Seek to the start position of last existing chunk if exist.
-                org_file.seek(chunk_i * config.core['chunk_size'])
+                org_file.seek(chunk_i * chunk_size)
                 while True:
                     # Read a chunk
-                    chunk_bytes = org_file.read(config.core['chunk_size'])
+                    chunk_bytes = org_file.read(chunk_size)
                     chunk_filename = "WBHTF{}.p{:04d}".format(datetime.today().strftime('%Y%m%d%H%M%S%f'), chunk_i)
                     chunk = WBHChunk(size=len(chunk_bytes),
                                      filename=chunk_filename,
                                      index=chunk_i,
                                      org_filename=os.path.split(item_wbhi.full_path)[1],
-                                     org_fullpath=os.path.join(config.core['temp_dir'], chunk_filename),
+                                     org_fullpath=os.path.join(temp_dir, chunk_filename),
                                      org_size=os.fstat(org_file.fileno()).st_size,
                                      msg_id=None,
                                      state=QueueState.UPLOADING,
@@ -164,30 +164,30 @@ class WBHTelegramBot:
                                      encryption_data=None,
                                      parent_qid=item_wbhi.parent_qid,
                                      parent_db_id=item_wbhi.db_id)
-                    config.logger_bot.debug("  🕑 Read {}".format(sizeof_fmt(chunk.size)))
+                    self.logger.debug("  🕑 Read {}".format(sizeof_fmt(chunk.size)))
                     if chunk_bytes:
                         try:
                             # Open chunk file to write
                             with open(chunk.org_fullpath, 'wb') as chunk_file_w:
                                 # write to chunk file
                                 chunk_file_w.write(chunk_bytes)
-                                config.logger_bot.debug("  🕒 Wrote {} to `{}` file"
-                                                        .format(sizeof_fmt(len(chunk_bytes)), chunk.filename))
-                            config.logger_bot.debug(f"  🕕 Sending `{chunk.filename}` file to BlackHole")
+                                self.logger.debug("  🕒 Wrote {} to `{}` file"
+                                                  .format(sizeof_fmt(len(chunk_bytes)), chunk.filename))
+                            self.logger.debug(f"  🕕 Sending `{chunk.filename}` file to BlackHole")
                             # Send chunk file to blackhole
                             self.send_chunk_file(chunk=chunk, blackhole=blackhole)
                             # Add to chunks list
                             item_wbhi.chunks.append(chunk)
                         except Exception as e:
                             is_all_successful = False
-                            config.logger_bot.error(
+                            self.logger.error(
                                 f"  ❌ ERROR: Could not send chunk#{chunk_i} `{chunk_filename}` to BlackHole: {str(e)}")
                     else:
                         break
                     chunk_i += 1
         except Exception as e:
             is_all_successful = False
-            config.logger_bot.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
+            self.logger.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
         return is_all_successful
 
 
@@ -196,5 +196,5 @@ class WBHTelegramBot:
             chunk_file = self.updater.bot.get_file(chunk.file_id)
             chunk_file.download(path_to_save)
         except Exception as e:
-            config.logger_bot.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
-                                    .format(chunk.index, chunk.filename, str(e)))
+            self.logger.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
+                              .format(chunk.index, chunk.filename, str(e)))

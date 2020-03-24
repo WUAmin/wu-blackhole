@@ -6,7 +6,7 @@ import shutil
 
 from config import config
 from wublackhole.wbh_item import ChecksumType, QueueState, WBHChunk, WBHItem
-from wublackhole.wbh_watcher import get_checksum_sha256_file, get_checksum_sha256_folder
+from wublackhole.helper import get_checksum_sha256_file, get_checksum_sha256_folder
 
 
 class WBHQueue:
@@ -148,6 +148,7 @@ class WBHQueue:
         everything_is_done = True
         item: WBHItem
         for item in items:
+            config.need_backup = True
             # Check if item is file or directory
             if item.is_dir:
                 # == Directory ==
@@ -157,7 +158,7 @@ class WBHQueue:
                         # Update item state
                         item.state = QueueState.UPLOADING
                         # get item checksum
-                        item.checksum = get_checksum_sha256_folder(item.full_path)
+                        item.checksum = get_checksum_sha256_folder(item.full_path, logger=config.logger_core)
                         item.checksum_type = ChecksumType.SHA256
                         # Add to Database and Update db_id on queue item
                         item.db_id = config.Database.add_item(item_wbhi=item, blackhole_id=self.blackhole.id,
@@ -200,7 +201,7 @@ class WBHQueue:
                         # Update item state
                         item.state = QueueState.UPLOADING
                         # get item checksum
-                        item.checksum = get_checksum_sha256_file(item.full_path)
+                        item.checksum = get_checksum_sha256_file(item.full_path, logger=config.logger_core)
                         item.checksum_type = ChecksumType.SHA256
                         # Add to Database and update db_id on queue
                         item.db_id = config.Database.add_item(item_wbhi=item, blackhole_id=self.blackhole.id,
@@ -214,7 +215,8 @@ class WBHQueue:
                     try:
                         everything_is_done = False
                         # Send File to blackhole
-                        if config.TelegramBot.send_file(item, self.blackhole):
+                        if config.TelegramBot.send_file(item, self.blackhole, config.core['chunk_size'],
+                                                        config.core['temp_dir']):
                             config.logger_core.debug("✅ Sent `{}` to BlackHole.".format(item.filename))
                             # Update item state and db_id
                             item.state = QueueState.DONE
@@ -264,9 +266,12 @@ class WBHQueue:
                     # Save Queue to disk
                     self.save()
 
-                # if item.state < QueueState.INQUEUE:
-                #     config.logger_core.warning("⚠ WARNING: There is a `{}` in queue with state of {}"
-                #                                .format(item.filename, item.state.name))
+        # Backup Database to blackhole
+        if len(items) == 0 and config.need_backup:
+            config.logger_core.debug("🕑 Sending database backup to blackhole...")
+
+            config.need_backup = False
+
 
         return everything_is_done
 

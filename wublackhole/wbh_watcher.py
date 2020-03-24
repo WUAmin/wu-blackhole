@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import hashlib
 import os
 import shutil
 import time
@@ -102,51 +101,6 @@ def get_path_size(full_path: str):
         return sum(f.stat().st_size for f in Path(full_path).glob('**/*') if f.is_file())
     else:
         return os.stat(full_path).st_size
-
-
-def get_checksum_sha256(chunk: bytes, running_hash=None):
-    if running_hash is None:
-        running_hash = hashlib.sha256()
-    running_hash.update(chunk)
-    return running_hash.hexdigest()
-
-
-def get_checksum_sha256_file(filepath: str, block_size: int = 16384, running_hash=None):
-    """ return checksum as str if successful, None of error. Default: block of 16K"""
-    if running_hash is None:
-        running_hash = hashlib.sha256()
-    try:
-        with open(filepath, "rb") as f:
-            # Read and update hash string value in blocks of 4K
-            for byte_block in iter(lambda: f.read(block_size), b""):
-                # running_hash.update(byte_block)
-                get_checksum_sha256(chunk=byte_block, running_hash=running_hash)
-    except Exception as e:
-        config.logger_core.error(f"  ❌ ERROR: Can not calculate checksum for `{filepath}` :\n {str(e)}")
-        return None
-    return running_hash.hexdigest()
-
-
-def get_checksum_sha256_folder(dirpath: str, block_size: int = 16384, running_hash=None):
-    """
-    return checksum as str if successful, None of error. Default: block of 16K
-    :param dirpath: path of the folder
-    :param block_size: block sizes to read. Default is 16k
-    :param running_hash: If you want to update a running hash, just pass hashlib object.
-    :return: checksum hex as str on success, None of error
-    """
-    if running_hash is None:
-        running_hash = hashlib.sha256()
-    try:
-        for root, dirs, files in os.walk(dirpath):
-            for names in files:
-                config.logger_core.debug(" 🖩 Hashing `{}`".format(names))
-                filepath = os.path.join(root, names)
-                get_checksum_sha256_file(filepath=filepath, block_size=block_size, running_hash=running_hash)
-    except Exception as e:
-        config.logger_core.error(f"  ❌ ERROR: Can not calculate checksum for `{dirpath}` :\n {str(e)}")
-        return None
-    return running_hash.hexdigest()
 
 
 def move_to_queue(bh, item_wpi: WBHItem):
