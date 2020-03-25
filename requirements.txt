@@ -1,4 +1,4 @@
 pycairo
 python-telegram-bot[socks]
 SQLAlchemy
-beeware==0.3.0.dev3
+PySide2
