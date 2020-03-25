@@ -91,9 +91,11 @@ class WBHDatabase:
             return f'WBHDbChunks {self.filename}'
 
 
-    def __init__(self, db_path, logger: logging.Logger, echo=False):
+    def __init__(self, db_path, logger: logging.Logger, echo=False, log_level=logging.INFO):
         self.logger = logger
         self._db_path = db_path
+
+        logging.getLogger('sqlalchemy.engine.base.Engine').setLevel(log_level)
 
         # Check existance of db variable
         if 'engine' not in locals():
@@ -102,6 +104,7 @@ class WBHDatabase:
             self.conn = self.engine.connect()
             self.Session = sessionmaker(bind=self.engine)
             self.Base.metadata.create_all(self.engine)
+
 
     def get_db_filepath(self):
         return self._db_path

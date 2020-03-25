@@ -127,7 +127,8 @@ class ClientConfig:
 
     def init_database(self):
         if os.path.exists(client.client['db_filepath']):
-            self.Database = WBHDatabase(db_path=client.client['db_filepath'], logger=self.logger_client, echo=True)
+            self.Database = WBHDatabase(db_path=client.client['db_filepath'], logger=self.logger_client, echo=True,
+                                        log_level=self.client['log']['client']['level'])
         else:
             self.Database = None
 
