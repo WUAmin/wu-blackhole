@@ -120,4 +120,12 @@ class ClientConfig:
         return f"{self.version[0]}.{self.version[1]}.{self.version[2]}"
 
 
+    def init_database(self):
+        db_filepath = os.path.join(self.config_dirpath, self.client["db_filename"])
+        if os.path.exists(db_filepath):
+            self.Database = WBHDatabase(db_path=db_filepath, logger=self.logger_client, echo=True)
+        else:
+            self.Database = None
+
+
 client: ClientConfig = ClientConfig()
