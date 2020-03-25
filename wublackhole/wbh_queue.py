@@ -5,10 +5,10 @@ import os
 import shutil
 from datetime import datetime
 
-from config import config
-from wublackhole.helper import chacha20poly1305_encrypt_data, compress_bytes_to_string_b64zlib, \
+from common.helper import ChecksumType, EncryptionType, chacha20poly1305_encrypt_data, compress_bytes_to_string_b64zlib, \
     get_checksum_sha256_file, get_checksum_sha256_folder
-from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
+from config import config
+from wublackhole.wbh_item import QueueState, WBHChunk, WBHItem
 
 
 class WBHQueue:
@@ -309,10 +309,10 @@ class WBHQueue:
                 db_chunks = []
                 db_c: WBHChunk
                 for db_c in db_wbhi.chunks:
-                    db_chunks.append('I'.join(
+                    db_chunks.append(';'.join(
                         [db_c.encryption.name, db_c.encryption_data, db_c.checksum_type.name, db_c.checksum,
                          db_c.file_id]))
-                raw_db_backup_data = 'G'.join(db_chunks).encode()
+                raw_db_backup_data = '^'.join(db_chunks).encode()
                 # Encrypt raw_db_backup_data with backup_pass in blackhole section of config
                 encrypted_data, key, nonce = chacha20poly1305_encrypt_data(data=raw_db_backup_data,
                                                                            secret=config.core['backup_pass'].encode())

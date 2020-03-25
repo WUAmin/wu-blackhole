@@ -1,19 +1,16 @@
 # This Python file uses the following encoding: utf-8
 import os
+import shutil
 import sys
 
 from PySide2.QtWidgets import QApplication
 from appdirs import user_config_dir
 
-from wublackholeclient5.client_config import client
-from wublackholeclient5.main_window import WUBlackHoleClient
+from pyclient.client_config import client
+from pyclient.main_window import WUBlackHoleClient
 
 
 def init_confg_dir():
-    # Set config directory and file
-    client.config_dirpath = user_config_dir("wublackhole")
-    client.config_filepath = os.path.join(client.config_dirpath, 'client_config.json')
-
     if os.path.exists(client.config_dirpath):  # Check if config dir exist
         if os.path.exists(client.config_filepath):  # Check if config file exist
             client.load()  # load config
@@ -21,6 +18,8 @@ def init_confg_dir():
             client.init_config()
         # Setup Database
         client.init_database()
+        # Setup Bot
+        client.init_bot(client.client['bot']['api'], client.client['bot']['proxy'])
     else:
         client.logger_client.warning("Config directory does not exist `{}`".format(client.config_dirpath))
         os.mkdir(client.config_dirpath)
@@ -36,5 +35,8 @@ if __name__ == "__main__":
     # sys.exit(app.exec_())
     # Start the event loop.
     app.exec_()
+
+    # clean up
+    shutil.rmtree(client.tempdir)
 
     sys.exit()

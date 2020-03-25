@@ -1,0 +1,3 @@
+{
+"files": ["wublackholeclient5/main_window.py","wublackholeclient5/restore_backup.ui",".gitignore","wublackhole/wbh_item.py","wublackhole/wbh_watcher.py","pyclient/restore_backup_window.ui","pyclient/main_window.py","wublackhole/wbh_queue.py","wublackholeclient5/main_window.ui","wublackhole/wbh_db.py","README.md","pyclient/client_config.py","requirements.txt","wublackhole/helper.py","config.py","WuBlackHole.py","wublackholeclient5/wublackholeclient.py","wublackhole/wbh_blackhole.py","wublackhole/wbh_bot.py","pyclient/main_window.ui","wublackholeclient.py","pyclient/restore_backup_window.py"]
+}

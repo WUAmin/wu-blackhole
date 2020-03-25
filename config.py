@@ -48,9 +48,9 @@ class Config:
         }
 
         # Variables to keep on runtime
-        self.Database: wublackhole.wbh_db.WBHDatabase = None
+        self.Database: common.wbh_db.WBHDatabase = None
         self.BlackHoles: list = []
-        self.TelegramBot: wublackhole.wbh_bot.WBHTelegramBot = None
+        self.TelegramBot: common.wbh_bot.WBHTelegramBot = None
         self.config_filepath = None
         self.need_backup: bool = False
 

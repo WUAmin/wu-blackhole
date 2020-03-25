@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from config import config
-from wublackhole.helper import sizeof_fmt
+from common.helper import sizeof_fmt
 from wublackhole.wbh_item import QueueState, WBHItem
 
 

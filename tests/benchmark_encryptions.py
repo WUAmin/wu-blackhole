@@ -2,7 +2,7 @@ import base64
 import os
 import time
 
-from wublackhole.helper import chacha20poly1305_encrypt_file, create_random_content_file, get_checksum_sha256_file, \
+from common.helper import chacha20poly1305_encrypt_file, create_random_content_file, get_checksum_sha256_file, \
     sizeof_fmt, chacha20poly1305_decrypt_file
 
 

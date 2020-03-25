@@ -1,11 +1,14 @@
 import json
 import logging
 import os
+import tempfile
 
-from wublackhole.wbh_bot import WBHTelegramBot
+from appdirs import user_config_dir
+
+from common.wbh_bot import WBHTelegramBot
 # import sys
 # sys.path.append('..')
-from wublackhole.wbh_db import WBHDatabase
+from common.wbh_db import WBHDatabase
 
 
 class ClientConfig:
@@ -13,11 +16,20 @@ class ClientConfig:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [0, 1, 0]
+        self.version: list = [0, 2, 0]
 
-        # Load from config.json
+        # Variables to keep on runtime
+        self.Database: WBHDatabase = None
+        self.BlackHoles: list = []
+        self.TelegramBot: WBHTelegramBot = None
+        self.config_dirpath = user_config_dir("wublackhole")
+        self.config_filepath = os.path.join(self.config_dirpath, 'client_config.json')
+        self.tempdir = tempfile.mkdtemp('.wbhclient')
+
+        # initial config values
         self.client: dict = {
-            "db_filename": "wbh.db",
+            "db_filepath": os.path.join(self.config_dirpath, "wbh.db"),
+            "keep_db_backup": 4,
             "bot": {
                 "api": "",
                 "proxy": None,
@@ -42,16 +54,9 @@ class ClientConfig:
             }
         }
 
-        # Variables to keep on runtime
-        self.Database: WBHDatabase = None
-        self.BlackHoles: list = []
-        self.TelegramBot: WBHTelegramBot = None
-        self.config_dirpath = None
-        self.config_filepath = None
-
         # create logger with 'blackhole_core'
         console = logging.StreamHandler()
-        file_handler = logging.FileHandler("core.log", "w")
+        file_handler = logging.FileHandler("client.log", "w")
         # noinspection PyArgumentList
         logging.basicConfig(level=self.client['log']['client']['level'],
                             format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
@@ -89,7 +94,7 @@ class ClientConfig:
             with open(self.config_filepath, 'w') as f:
                 json.dump({
                     "version": self.version,
-                    "core": self.client
+                    "client": self.client
                 }, f, sort_keys=False, indent=2, ensure_ascii=False)
         except Exception as e:
             self.logger_client.error(
@@ -121,11 +126,18 @@ class ClientConfig:
 
 
     def init_database(self):
-        db_filepath = os.path.join(self.config_dirpath, self.client["db_filename"])
-        if os.path.exists(db_filepath):
-            self.Database = WBHDatabase(db_path=db_filepath, logger=self.logger_client, echo=True)
+        if os.path.exists(client.client['db_filepath']):
+            self.Database = WBHDatabase(db_path=client.client['db_filepath'], logger=self.logger_client, echo=True)
         else:
             self.Database = None
+
+
+    def init_bot(self, api, proxy=None):
+        if api:
+            self.TelegramBot = WBHTelegramBot(api=api, logger=self.logger_bot, proxy=proxy,
+                                              log_level=self.client['log']['bot']['level'])
+        else:
+            self.TelegramBot = None
 
 
 client: ClientConfig = ClientConfig()

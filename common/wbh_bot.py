@@ -7,12 +7,12 @@ from datetime import datetime
 import telegram  # pip install python-telegram-bot --upgrade
 from telegram.ext import Updater
 
-from wublackhole.helper import chacha20poly1305_encrypt_data, get_checksum_sha256
+from common.helper import ChecksumType, EncryptionType, chacha20poly1305_encrypt_data, get_checksum_sha256
 # from config import config
-from wublackhole.helper import sizeof_fmt
+from common.helper import sizeof_fmt
+from common.wbh_db import WBHDatabase
 from wublackhole.wbh_blackhole import WBHBlackHole
-from wublackhole.wbh_db import WBHDatabase
-from wublackhole.wbh_item import ChecksumType, EncryptionType, QueueState, WBHChunk, WBHItem
+from wublackhole.wbh_item import QueueState, WBHChunk, WBHItem
 
 
 class WBHTelegramBot:
@@ -151,6 +151,8 @@ class WBHTelegramBot:
                     # Read a chunk
                     chunk_bytes = org_file.read(chunk_size)
                     if chunk_bytes:
+                        # get checksum before encryption
+                        checksum = get_checksum_sha256(chunk_bytes)
                         # Check Encryption
                         encryption_data = None
                         if encryption_type == EncryptionType.ChaCha20Poly1305:
@@ -169,7 +171,7 @@ class WBHTelegramBot:
                                          org_size=os.fstat(org_file.fileno()).st_size,
                                          msg_id=None,
                                          state=QueueState.UPLOADING,
-                                         checksum=get_checksum_sha256(chunk_bytes),
+                                         checksum=checksum,
                                          checksum_type=ChecksumType.SHA256,
                                          encryption=encryption_type,
                                          encryption_data=encryption_data,
@@ -200,15 +202,22 @@ class WBHTelegramBot:
             self.logger.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
         return is_all_successful
 
+
     def send_msg(self, chat_id, text, parse_mode=telegram.ParseMode.MARKDOWN):
         return self.updater.bot.send_message(chat_id=chat_id,
-                                                    text=text,
-                                                    parse_mode=parse_mode)
+                                             text=text,
+                                             parse_mode=parse_mode)
+
+
+    def get_file_by_id(self, file_id, path_to_save: str):
+        file = self.updater.bot.get_file(file_id)
+        return file.download(path_to_save)
+
 
     def get_chunk(self, chunk: WBHDatabase.WBHDbChunks, path_to_save: str):
         try:
-            chunk_file = self.updater.bot.get_file(chunk.file_id)
-            chunk_file.download(path_to_save)
+            return self.get_file_by_id(chunk.file_id, path_to_save)
         except Exception as e:
             self.logger.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
                               .format(chunk.index, chunk.filename, str(e)))
+        return None

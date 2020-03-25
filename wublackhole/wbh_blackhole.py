@@ -3,8 +3,8 @@
 import json
 import os
 
+from common.helper import EncryptionType
 from config import config
-from wublackhole.wbh_item import EncryptionType
 from wublackhole.wbh_queue import WBHQueue
 
 

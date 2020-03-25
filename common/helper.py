@@ -3,8 +3,24 @@ import logging
 import os
 import zlib
 from base64 import b64decode, b64encode
+from enum import Enum
 
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
+
+class ChecksumType(Enum):
+    NONE = 0
+    # MD5 = 10
+    # SHA1 = 20
+    SHA256 = 30
+    # SHA512 = 40
+
+
+class EncryptionType(Enum):
+    NONE = 0
+    ChaCha20Poly1305 = 10
+    # FERNET_SHA256 = 20
+    # AES_SHA256 = 30
 
 
 def sizeof_fmt(num: int, trailing_zeros: int = 2, suffix: str = 'B', separate_prefix: bool = True) -> str:
@@ -128,5 +144,5 @@ def compress_bytes_to_string_b64zlib(data: bytes) -> str:
     return b64encode(zlib.compress(data)).decode('ascii')
 
 
-def decompress_bytes_to_string_b64zlib(string: str) -> str:
+def decompress_bytes_to_string_b64zlib(string: str) -> bytes:
     return zlib.decompress(b64decode(string.encode('ascii')))

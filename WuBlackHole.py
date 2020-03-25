@@ -6,8 +6,8 @@ import os
 from config import config
 # import settings as settings
 from wublackhole.wbh_blackhole import WBHBlackHole
-from wublackhole.wbh_bot import WBHTelegramBot
-from wublackhole.wbh_db import WBHDatabase
+from common.wbh_bot import WBHTelegramBot
+from common.wbh_db import WBHDatabase
 from wublackhole.wbh_watcher import start_watch
 
 

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import uuid
 from enum import Enum
+from common.helper import ChecksumType, EncryptionType
 
 
 class QueueState(Enum):
@@ -12,21 +13,6 @@ class QueueState(Enum):
     UPLOADING = 50  # Uploading and adding item itself to database (Not recursive)
     DONE = 60  # Item added to database and uploaded (Not recursive)
     DELETED = 70  # Item is deleted from disk not queue
-
-
-class ChecksumType(Enum):
-    NONE = 0
-    # MD5 = 10
-    # SHA1 = 20
-    SHA256 = 30
-    # SHA512 = 40
-
-
-class EncryptionType(Enum):
-    NONE = 0
-    ChaCha20Poly1305 = 10
-    # FERNET_SHA256 = 20
-    # AES_SHA256 = 30
 
 
 class WBHChunk:

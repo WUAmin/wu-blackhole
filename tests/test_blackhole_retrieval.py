@@ -5,9 +5,9 @@ import unittest
 
 from WuBlackHole import init_WBH, init_temp
 from config import config
-from wublackhole.helper import create_random_content_file
-from wublackhole.wbh_db import WBHDatabase
-from wublackhole.wbh_watcher import get_checksum_sha256_file, print_contents, start_watch
+from common.helper import create_random_content_file
+from common.wbh_db import WBHDatabase
+from wublackhole.wbh_watcher import get_checksum_sha256_file, start_watch
 
 
 class TestItemRetrieval(unittest.TestCase):

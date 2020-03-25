@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
-    <height>320</height>
+    <width>551</width>
+    <height>328</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,8 +24,11 @@
        <attribute name="title">
         <string>Explorer</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_3">
-        <item row="0" column="0">
+       <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0">
+        <property name="verticalSpacing">
+         <number>2</number>
+        </property>
+        <item row="1" column="0">
          <widget class="QTableView" name="explorer_table">
           <property name="alternatingRowColors">
            <bool>true</bool>
@@ -47,6 +50,13 @@
           </attribute>
          </widget>
         </item>
+        <item row="0" column="0">
+         <layout class="QHBoxLayout" name="address_bar_hl">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+         </layout>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="tab_settings">
@@ -54,96 +64,6 @@
         <string>Settings</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2" rowstretch="1,0">
-        <item row="0" column="2">
-         <layout class="QFormLayout" name="formLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Telegram API Key:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="api_le">
-            <property name="echoMode">
-             <enum>QLineEdit::PasswordEchoOnEdit</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Database File:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="lineEdit_2"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>Client Log Level:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="cleint_log_level_cb">
-            <item>
-             <property name="text">
-              <string>Debug</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Info</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Warning</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Error</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Bot Log Level:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QComboBox" name="bot_log_level_cb">
-            <item>
-             <property name="text">
-              <string>Debug</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Info</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Warning</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Error</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </item>
         <item row="1" column="2">
          <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0,0">
           <property name="spacing">
@@ -178,6 +98,131 @@
           </item>
          </layout>
         </item>
+        <item row="0" column="2">
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Telegram API Key:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="api_le">
+            <property name="echoMode">
+             <enum>QLineEdit::PasswordEchoOnEdit</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Database Code:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Client Log Level:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="client_log_level_cb">
+            <item>
+             <property name="text">
+              <string>Debug</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Info</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Warning</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Error</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>Bot Log Level:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QComboBox" name="bot_log_level_cb">
+            <item>
+             <property name="text">
+              <string>Debug</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Info</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Warning</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Error</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QTextEdit" name="db_code_te">
+            <property name="placeholderText">
+             <string>Enter database code if you want to restore or leave it empy</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Database Path:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <widget class="QLineEdit" name="db_path_le"/>
+            </item>
+            <item row="0" column="1">
+             <widget class="QToolButton" name="toolButton">
+              <property name="text">
+               <string>R</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Max DB Backup:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QSpinBox" name="keep_db_sp"/>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
      </widget>
@@ -189,7 +234,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>480</width>
+     <width>551</width>
      <height>18</height>
     </rect>
    </property>
