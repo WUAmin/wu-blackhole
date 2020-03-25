@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>551</width>
-    <height>328</height>
+    <width>568</width>
+    <height>433</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>WU-BlackHole Client</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -24,11 +24,11 @@
        <attribute name="title">
         <string>Explorer</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0">
+       <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0,0">
         <property name="verticalSpacing">
          <number>2</number>
         </property>
-        <item row="1" column="0">
+        <item row="3" column="0">
          <widget class="QTableView" name="explorer_table">
           <property name="alternatingRowColors">
            <bool>true</bool>
@@ -51,11 +51,72 @@
          </widget>
         </item>
         <item row="0" column="0">
-         <layout class="QHBoxLayout" name="address_bar_hl">
-          <property name="spacing">
-           <number>0</number>
+         <widget class="QFrame" name="address_bar_f">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-         </layout>
+          <property name="styleSheet">
+           <string notr="true">QFrame {
+  background-color: rgb(247, 247, 247);
+  border: 1px solid rgb(243, 243, 243);
+border-radius: 4px;
+}
+QPushButton {
+  background-color: rgb(238, 238, 236);
+  border-width: 0 1px 0 0;
+  border-style: solid;
+  border-color: rgb(186, 189, 182);
+  padding: 0 4px;
+}
+</string>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <layout class="QHBoxLayout" name="address_bar_hl">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -234,7 +295,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>551</width>
+     <width>568</width>
      <height>18</height>
     </rect>
    </property>

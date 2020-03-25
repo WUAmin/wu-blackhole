@@ -5,7 +5,7 @@ from PySide2 import QtWidgets
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import QMainWindow, QMessageBox, QDialog
+from PySide2.QtWidgets import QDialog, QMainWindow, QMessageBox
 
 from common.helper import sizeof_fmt
 from common.wbh_db import WBHDatabase
@@ -91,6 +91,9 @@ class WUBlackHoleClient(QMainWindow):
         self.tab_explorer = self.window.findChild(QtWidgets.QWidget, 'tab_explorer')
         self.explorer_table = self.window.findChild(QtWidgets.QTableView, 'explorer_table')
         self.explorer_table.doubleClicked.connect(self.explorer_table_doublecliked)
+        self.address_bar_hl = self.window.findChild(QtWidgets.QHBoxLayout, 'address_bar_hl')
+        self.button_group = QtWidgets.QButtonGroup(parent=self.tab_explorer)
+        self.button_group.buttonClicked[int].connect(self.on_address_bar_clicked)
 
         # Load settings tab values from config
         self.reload_settings_tab()
@@ -100,6 +103,30 @@ class WUBlackHoleClient(QMainWindow):
 
         # Show Window
         self.window.show()
+
+
+    def on_address_bar_clicked(self, btn_id):
+        found = False
+        target_btn = self.button_group.button(btn_id)
+        # Remove all buttons after target button
+        for button in self.button_group.buttons():
+            if found:
+                self.button_group.removeButton(button)
+                self.address_bar_hl.removeWidget(button)
+                button.close()
+            else:
+                if button is target_btn:
+                    found = True
+
+        if target_btn.property('db_id') < 0:
+            if target_btn.property('blackhole_id') is None:  # ROOT
+                self.explorer_load_blackholes()
+            else:  # Root of blackhole
+                self.explorer_load_folder(blackhole_id=target_btn.property('blackhole_id'),
+                                          item_id=None)
+        else:  # folder
+            self.explorer_load_folder(blackhole_id=target_btn.property('blackhole_id'),
+                                      item_id=target_btn.property('db_id'))
 
 
     def reload_settings_tab(self):
@@ -119,6 +146,8 @@ class WUBlackHoleClient(QMainWindow):
             # Switch to Explorer Tab
             self.tab_widget.setCurrentIndex(0)
         else:
+            # clear addressbar
+            self.addressbar_clear()
             # Disable Explorer Tab
             self.tab_explorer.setDisabled(True)
             # Switch to settings Tab
@@ -126,18 +155,47 @@ class WUBlackHoleClient(QMainWindow):
 
 
     def explorer_table_doublecliked(self, clickedIndex: QModelIndex):
-        bh_id = self.explorer_table.property('is_blackhole')
-        if bh_id is None:
-            bh_id = self.explorer_data[clickedIndex.row()][3]
-            self.explorer_load_folder(blackhole_id=bh_id, item_id=None)
+        blackhole_id = self.explorer_table.property('blackhole_id')
+        if blackhole_id is None:
+            # Loading root of blackhole
+            blackhole_id = self.explorer_data[clickedIndex.row()][3]  # get blackhole id
+            self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=-1, blackhole_id=blackhole_id)
+            self.explorer_load_folder(blackhole_id=blackhole_id, item_id=None)
         else:
-            item_id = self.explorer_data[clickedIndex.row()][3]
-            self.explorer_load_folder(blackhole_id=bh_id, item_id=item_id)
+            # Loading a folder in blackhole blackhole_id
+            item_id = self.explorer_data[clickedIndex.row()][3]  # get item id
+            self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=item_id,
+                                blackhole_id=blackhole_id)
+            self.explorer_load_folder(blackhole_id=blackhole_id, item_id=item_id)
+
+
+    def addressbar_clear(self):
+        for button in self.button_group.buttons():
+            self.button_group.removeButton(button)
+            self.address_bar_hl.removeWidget(button)
+            button.close()
+
+
+    def addressbar_add(self, name, db_id, blackhole_id):
+        btn = QtWidgets.QPushButton(text=name, parent=self.tab_explorer)
+        btn.setProperty('db_id', db_id)
+        btn.setProperty('blackhole_id', blackhole_id)
+        btn.adjustSize()
+        btn.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        # Add button to ButtonGroup
+        self.button_group.addButton(btn, db_id)
+        print(name, db_id, blackhole_id)
+        # insert widget before the last one (last one is space expander)
+        self.address_bar_hl.insertWidget(self.address_bar_hl.count() - 1, btn)
 
 
     def explorer_load_blackholes(self):
         self.explorer_table.setProperty('blackhole_id', None)
         self.explorer_data = []
+
+        # # clear address bar
+        self.addressbar_clear()
+
         if client.Database:
             blackholes = client.Database.get_blackholes()
             bh: WBHDatabase.WBHDbBlackHoles
@@ -147,10 +205,11 @@ class WUBlackHoleClient(QMainWindow):
             self.explorer_table.setModel(self.model)
             for ih in range(len(self.model.header)):
                 self.explorer_table.resizeColumnToContents(ih)
+            self.addressbar_add(name="ROOT", db_id=-2, blackhole_id=None)
 
 
     def explorer_load_folder(self, blackhole_id, item_id):
-        self.explorer_table.setProperty('is_blackhole', blackhole_id)
+        self.explorer_table.setProperty('blackhole_id', blackhole_id)
         self.explorer_data = []
         if client.Database:
             items = client.Database.get_items_by_parent_id(blackhole_id=blackhole_id, items_parent=item_id)
@@ -186,7 +245,7 @@ class WUBlackHoleClient(QMainWindow):
             else:
                 rb_window = RestoreBackupWindow(self.db_code_te.toPlainText())
                 self.db_code_te.setPlainText("")
-
+        tttt = 1
         client.client['bot']['api'] = self.api_le.text()
         client.client['keep_db_backup'] = self.keep_db_sp.value()
         client.client['db_filepath'] = self.db_path_le.text()
@@ -194,11 +253,12 @@ class WUBlackHoleClient(QMainWindow):
         client.client['log']['bot']['level'] = (self.bot_log_level_cb.currentIndex() + 1) * 10
         client.save()
 
-        if rb_window.window.result() == QDialog.DialogCode.Accepted:
-            # Setup Database
-            client.init_database()
-            # Check if there is any Database
-            self.check_database_avalibility()
+        if 'rb_window' in locals():
+            if rb_window.window.result() == QDialog.DialogCode.Accepted:
+                # Setup Database
+                client.init_database()
+                # Check if there is any Database
+                self.check_database_avalibility()
 
     def reset_config_b_oncliked(self):
         client.load()
