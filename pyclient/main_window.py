@@ -269,7 +269,7 @@ class ClientMainWindow(QMainWindow):
             filepath = QtWidgets.QFileDialog.getSaveFileName(self.window, 'Save file', selected_row[1].data(),
                                                              "All Files (*.*)")
             QCoreApplication.processEvents()  # to avoid QFileDialog stay open because of GUI delay
-            if len(filepath) > 3:
+            if len(filepath[0]) > 3:
                 self.download_file(item_id=selected_row[3].data(),
                                    blackhole_id=self.explorer_table.property('blackhole_id'),
                                    save_to=filepath[0])
