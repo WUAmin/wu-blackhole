@@ -22,13 +22,14 @@ Client with ask for `backup_pass` and download, decrypt and update your database
 
 
 #### Temporary Notes:
-* Max block size is 50M. Some encryption methods may increase the final file size. be careful about that and do not use max limit.
+* Max block size is 20M (50MB to send, 20MB to download using bot). Some encryption methods may increase the final file size. be careful about that and do not use max limit.
 * Do not change block size while there is items in queue.
 
 
 
 ### GUI Client
 #### Linux
+~~
 Builing AppImage using Ubuntu 16.04 on docker. ([for more information](https://docs.beeware.org/en/latest/tutorial/tutorial-3.html#creating-your-application-scaffold))
 This `_linux-build.sh` remove old builds.
 ```bash
@@ -41,11 +42,12 @@ docker run -it -v /path/to/root/of/project:/project --privileged blackholeguicli
   ```
   fusermount: mount failed: Operation not permitted
   ```
-  
+~~
   
 
 ## Screenshots
 ![explorer tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/explorer-tab.png)
 ![settings tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/settings-tab.png)
 ![restore database](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/restore-database.png)
+![input password](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/input-password.png)
 
