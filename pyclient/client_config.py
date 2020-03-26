@@ -25,6 +25,7 @@ class ClientConfig:
         self.config_dirpath = user_config_dir("wublackhole")
         self.config_filepath = os.path.join(self.config_dirpath, 'client_config.json')
         self.tempdir = tempfile.mkdtemp('.wbhclient')
+        self.password: str = None
 
         # initial config values
         self.client: dict = {

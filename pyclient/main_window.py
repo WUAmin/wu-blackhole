@@ -9,7 +9,7 @@ from PySide2.QtUiTools import QUiLoader
 from PySide2.QtWidgets import QDialog, QMainWindow, QMessageBox
 
 from common.helper import ChecksumType, EncryptionType, chacha20poly1305_decrypt_data, get_checksum_sha256, \
-    get_checksum_sha256_file, sizeof_fmt
+    get_checksum_sha256_file, get_checksum_sha256_folder, sizeof_fmt
 from common.wbh_db import WBHDatabase
 from pyclient.client_config import client
 from pyclient.input_password import InputPasswordDialog
@@ -104,6 +104,8 @@ class ClientMainWindow(QMainWindow):
         self.download_pb.clicked.connect(self.on_download_pb_cliked)
         self.dl_progress = self.window.findChild(QtWidgets.QProgressBar, 'dl_progress')
         self.dl_progress.setVisible(False)
+        self.dl_progress_folder = self.window.findChild(QtWidgets.QProgressBar, 'dl_progress_folder')
+        self.dl_progress_folder.setVisible(False)
 
         # Load settings tab values from config
         self.reload_settings_tab()
@@ -253,20 +255,28 @@ class ClientMainWindow(QMainWindow):
         # Get selected row
         selected_row = self.explorer_table.selectedIndexes()
         # Ask where to save
-        if selected_row[0].data() == "__DIR":
+        if selected_row[0].data(100) == "__DIR":
             # Directory
-            QMessageBox().information(self, "", "Not Implemented yet!")
-            pass
+            self.dl_progress_folder.setVisible(True)
+            dirpath = QtWidgets.QFileDialog.getExistingDirectory(self.window, 'Save to folder', selected_row[1].data())
+            QCoreApplication.processEvents()  # to avoid QFileDialog stay open because of GUI delay
+            if len(dirpath) > 3:
+                self.download_folder(item_id=selected_row[3].data(),
+                                     blackhole_id=self.explorer_table.property('blackhole_id'),
+                                     save_to=dirpath)
         else:
             # File
             filepath = QtWidgets.QFileDialog.getSaveFileName(self.window, 'Save file', selected_row[1].data(),
                                                              "All Files (*.*)")
-            self.download_file(item_id=selected_row[3].data(),
-                               blackhole_id=self.explorer_table.property('blackhole_id'),
-                               save_to=filepath[0])
-            # Re-enable UI
-            self.tab_widget.setDisabled(False)
-            self.dl_progress.setVisible(False)
+            QCoreApplication.processEvents()  # to avoid QFileDialog stay open because of GUI delay
+            if len(filepath) > 3:
+                self.download_file(item_id=selected_row[3].data(),
+                                   blackhole_id=self.explorer_table.property('blackhole_id'),
+                                   save_to=filepath[0])
+        # Re-enable UI
+        self.tab_widget.setDisabled(False)
+        self.dl_progress.setVisible(False)
+        self.dl_progress_folder.setVisible(False)
 
 
     def on_save_config_b_cliked(self):
@@ -319,16 +329,102 @@ class ClientMainWindow(QMainWindow):
         self.dl_progress.setValue(percentage)
         self.dl_progress.setFormat(
             "{}/{}   {}%".format(sizeof_fmt(wrote_size, 1), sizeof_fmt(total_size, 1), percentage))
-        self.repaint()
+        self.dl_progress.repaint()
+        QCoreApplication.processEvents()  # force process events because of GUI delay
 
 
-    def download_file(self, item_id, blackhole_id, save_to):
+    def dl_progress_folder_update(self, wrote_size: int, total_size: int):
+        percentage = int((wrote_size * 100) / total_size)
+        self.dl_progress_folder.setValue(percentage)
+        self.dl_progress_folder.setFormat(
+            "{}/{}   {}%".format(sizeof_fmt(wrote_size, 1), sizeof_fmt(total_size, 1), percentage))
+        self.dl_progress_folder.repaint()
+        QCoreApplication.processEvents()  # force process events because of GUI delay
+
+
+    def ask_for_rewrite(self, path) -> bool:
+        return QMessageBox.question(self, "Rewrite ?", "Following path exist. "
+                                                       "Are you sure you want to rewrite on it?"
+                                                       "\n`{}`".format(path),
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+
+    def download_folder(self, item_id, blackhole_id, save_to, db_item: WBHDatabase.WBHDbItems = None,
+                        ask_rewrite: bool = True):
+        no_error = True
         try:
-            password = None
+            # Get item from Database if did not presented
+            if db_item is None:
+                db_item = client.Database.get_item_by_id(blackhole_id=blackhole_id, item_id=item_id)
+                self.dl_progress_folder.setProperty('wrote_size', 0)
+                self.dl_progress_folder.setProperty('total_size', db_item.size)
+            # update progressbar to set initial text
+            self.dl_progress_folder_update(0, self.dl_progress_folder.property('total_size'))
+            # prepare new folder path
+            new_dirpath = os.path.join(save_to, db_item.filename)
+            # check if exist and ask for rewrite
+            if ask_rewrite:
+                if os.path.exists(new_dirpath):
+                    if self.ask_for_rewrite(new_dirpath) == QMessageBox.No:
+                        return
+                    else:
+                        ask_rewrite = False
+            os.makedirs(new_dirpath, exist_ok=True)
+            client.logger_client.debug("Create new folder: `{}`".format(new_dirpath))
+            itm: WBHDatabase.WBHDbItems
+            for itm in db_item.items:
+                if itm.is_dir:
+                    no_error = no_error & self.download_folder(item_id=item_id, blackhole_id=blackhole_id,
+                                                               save_to=new_dirpath, db_item=itm,
+                                                               ask_rewrite=ask_rewrite)
+                else:
+                    new_filepath = os.path.join(new_dirpath, itm.filename)
+                    no_error = no_error & self.download_file(item_id=item_id, blackhole_id=blackhole_id,
+                                                             save_to=new_filepath, db_item=itm,
+                                                             ask_rewrite=ask_rewrite, end_msg_box=False)
+                    self.dl_progress_folder.setProperty('wrote_size',
+                                                        self.dl_progress_folder.property('wrote_size') + itm.size)
+                self.dl_progress_folder_update(self.dl_progress_folder.property('wrote_size'),
+                                               self.dl_progress_folder.property('total_size'))
+
+            if db_item.id == item_id:  # original download request
+                # Match file checksum
+                if db_item.checksum_type == ChecksumType.SHA256.value:
+                    db_item_checksum = get_checksum_sha256_folder(dirpath=new_dirpath)
+                    if db_item_checksum == db_item.checksum:
+                        client.logger_client.debug("{} checksum for `{}` matched."
+                                                   .format(ChecksumType(db_item.checksum_type).name,
+                                                           db_item.filename))
+                        # Folder Downloaded Correctly
+                        msg_box = QMessageBox()
+                        msg_box.information(self, 'Download',
+                                            "Folder successfully downloaded:\n`{}`".format(new_dirpath))
+                        return no_error
+                    else:
+                        raise Exception("Mismatch checksum for `{}`".format(db_item.filename))
+            return no_error
+        except Exception as e:
+            client.logger_client.error("Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
+            msg_box = QMessageBox()
+            msg_box.critical(self, 'Error', "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
+        return False
+
+
+    def download_file(self, item_id, blackhole_id, save_to, db_item: WBHDatabase.WBHDbItems = None,
+                      ask_rewrite: bool = True, end_msg_box: bool = True):
+        try:
             is_error = 0
             wrote_size = 0
-            # Get item from Database
-            db_item = client.Database.get_item_by_id(blackhole_id=blackhole_id, item_id=item_id)
+            # check if exist and ask for rewrite
+            if ask_rewrite:
+                if os.path.exists(save_to):
+                    if self.ask_for_rewrite(save_to) == QMessageBox.No:
+                        return
+                    else:
+                        ask_rewrite = False
+            # Get item from Database if did not presented
+            if db_item is None:
+                db_item = client.Database.get_item_by_id(blackhole_id=blackhole_id, item_id=item_id)
             # update progressbar to set initial text
             self.dl_progress_update(0, db_item.size)
             # Open file to write
@@ -343,22 +439,24 @@ class ClientMainWindow(QMainWindow):
                             client.logger_client.debug(
                                 "Read {} from chunk#{}".format(sizeof_fmt(len(chunk_data)), chunk.index))
                             if chunk.encryption == EncryptionType.ChaCha20Poly1305.value:
-                                # ask for encryption if never asked
-                                if password is None:
+                                client.logger_client.debug(
+                                    "Decrypting {} ...".format(EncryptionType.ChaCha20Poly1305.name))
+                                # Extract key and nonce from encryption_data
+                                chunk_key_hex, chunk_nonce_hex = chunk.encryption_data.split('O')
+                                # ask for password if never asked
+                                if client.password is None:
                                     ip_dialog = InputPasswordDialog(EncryptionType(chunk.encryption))
                                     if ip_dialog.window.result() == QDialog.DialogCode.Rejected:
                                         # User didn't entered password, CANCEL
                                         client.logger_client.warning("Aborted by user.")
                                         is_error = 2
                                         break
-                                client.logger_client.debug(
-                                    "Decrypting {} ...".format(EncryptionType.ChaCha20Poly1305.name))
-                                # Extract key and nonce from encryption_data
-                                chunk_key_hex, chunk_nonce_hex = chunk.encryption_data.split('O')
-                                password = ip_dialog.encryption_pass
+                                    else:
+                                        client.password = ip_dialog.encryption_pass
+                                    QCoreApplication.processEvents()  # force process events because of GUI delay
                                 # Decrypt chunk
                                 chunk_data = chacha20poly1305_decrypt_data(data=chunk_data,
-                                                                           secret=password.encode(),
+                                                                           secret=client.password.encode(),
                                                                            key=bytes.fromhex(chunk_key_hex),
                                                                            nonce=bytes.fromhex(chunk_nonce_hex))
                             # Matching Checksums
@@ -392,15 +490,20 @@ class ClientMainWindow(QMainWindow):
                                                        .format(ChecksumType(db_item.checksum_type).name,
                                                                db_item.filename))
                             # File Downloaded Correctly
-                            msg_box = QMessageBox()
-                            msg_box.information(self, 'Download', "File successfully downloaded:\n`{}`".format(save_to))
+                            if end_msg_box:
+                                msg_box = QMessageBox()
+                                msg_box.information(self, 'Download',
+                                                    "File successfully downloaded:\n`{}`".format(save_to))
+                            return True
                         else:
                             raise Exception("Mismatch checksum for `{}`".format(db_item.filename))
         except cryptography.exceptions.InvalidTag:
             client.logger_client.error("Incorrect password for chunk#{}".format(chunk.index))
+            client.password = None
             msg_box = QMessageBox()
             msg_box.critical(self, 'Error', "Password is incorrect.")
         except Exception as e:
             client.logger_client.error("Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
             msg_box = QMessageBox()
             msg_box.critical(self, 'Error', "Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
+        return False

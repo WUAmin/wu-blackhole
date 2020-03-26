@@ -268,6 +268,7 @@ class WBHDatabase:
             return session.query(self.WBHDbItems) \
                 .filter_by(blackhole_id=blackhole_id, id=item_id) \
                 .options(lazyload(self.WBHDbItems.chunks)) \
+                .options(lazyload(self.WBHDbItems.items)) \
                 .first()
         except Exception as e:
             self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
