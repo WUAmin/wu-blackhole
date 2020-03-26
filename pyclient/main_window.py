@@ -72,7 +72,7 @@ class TableModel(QAbstractTableModel):
         return None
 
 
-class ClientMainWindow(QMainWindow):
+class ClientMainWindow(QObject):
     def __init__(self, *args, **kwargs):
         super(ClientMainWindow, self).__init__(*args, **kwargs)
         # Load the .ui file
