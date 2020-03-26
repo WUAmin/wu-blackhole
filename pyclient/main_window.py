@@ -283,18 +283,18 @@ class ClientMainWindow(QObject):
         # Check api
         if len(self.api_le.text()) < 30:
             msg_box = QMessageBox()
-            msg_box.warning(self, 'No API', "You have to enter a valid Telegram bot api.")
+            msg_box.warning(self.window, 'No API', "You have to enter a valid Telegram bot api.")
 
         # Check db_filepath
         if len(self.db_path_le.text()) < 2:
             msg_box = QMessageBox()
-            msg_box.warning(self, 'Invalid Database Path', "You have to enter a valid Database path.")
+            msg_box.warning(self.window, 'Invalid Database Path', "You have to enter a valid Database path.")
 
         # Check database code
         if len(self.db_code_te.toPlainText()) > 0:  # ignore if db code is empty
             if len(self.db_code_te.toPlainText()) < 200:  # a single chunk db is more than 400 characters
                 msg_box = QMessageBox()
-                msg_box.warning(self, 'Invalid Database Code', "Database code is too short to be valid.")
+                msg_box.warning(self.window, 'Invalid Database Code', "Database code is too short to be valid.")
             else:
                 rb_window = RestoreBackupDialog(self.db_code_te.toPlainText())
                 self.db_code_te.setPlainText("")
@@ -343,7 +343,7 @@ class ClientMainWindow(QObject):
 
 
     def ask_for_rewrite(self, path) -> bool:
-        return QMessageBox.question(self, "Rewrite ?", "Following path exist. "
+        return QMessageBox.question(self.window, "Rewrite ?", "Following path exist. "
                                                        "Are you sure you want to rewrite on it?"
                                                        "\n`{}`".format(path),
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -397,7 +397,7 @@ class ClientMainWindow(QObject):
                                                            db_item.filename))
                         # Folder Downloaded Correctly
                         msg_box = QMessageBox()
-                        msg_box.information(self, 'Download',
+                        msg_box.information(self.window, 'Download',
                                             "Folder successfully downloaded:\n`{}`".format(new_dirpath))
                         return no_error
                     else:
@@ -406,7 +406,7 @@ class ClientMainWindow(QObject):
         except Exception as e:
             client.logger_client.error("Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
             msg_box = QMessageBox()
-            msg_box.critical(self, 'Error', "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
+            msg_box.critical(self.window, 'Error', "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
         return False
 
 
@@ -495,18 +495,18 @@ class ClientMainWindow(QObject):
                             # File Downloaded Correctly
                             if end_msg_box:
                                 msg_box = QMessageBox()
-                                msg_box.information(self, 'Download',
+                                msg_box.information(self.window, 'Download',
                                                     "File successfully downloaded:\n`{}`".format(save_to))
                             return True
                         else:
                             raise Exception("Mismatch checksum for `{}`".format(db_item.filename))
         except cryptography.exceptions.InvalidTag:
-            client.logger_client.error("Incorrect password for chunk#{}".format(chunk.index))
+            client.logger_client.error("Incorrect password.")
             client.password = None
             msg_box = QMessageBox()
-            msg_box.critical(self, 'Error', "Password is incorrect.")
+            msg_box.critical(self.window, 'Error', "Password is incorrect.")
         except Exception as e:
             client.logger_client.error("Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
             msg_box = QMessageBox()
-            msg_box.critical(self, 'Error', "Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
+            msg_box.critical(self.window, 'Error', "Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
         return False
