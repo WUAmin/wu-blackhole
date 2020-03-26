@@ -35,7 +35,7 @@ class Config:
                     "users": []
                 },
             },
-            "chunk_size": 48000000,
+            "chunk_size": 18874368,
             "path_check_interval": 3,
             "log": {
                 "core": {
@@ -76,8 +76,6 @@ class Config:
 
     def init_config(self):
         """ Generating some of config based on config.json """
-        # TODO: Use list of admins instead of one ID
-        self.DefaultChatID = self.core['bot']['chat_ids']['admins'][0]['id']
 
         # Update log config
         self.logger_core.setLevel(self.core['log']['core']['level'])

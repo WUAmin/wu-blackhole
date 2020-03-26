@@ -1,7 +1,7 @@
 {
   "version": [
+    1,
     0,
-    9,
     0
   ],
   "blackholes": [
@@ -24,19 +24,9 @@
       "api": "YOUR-BOT-ID",
       "proxy": {
         "proxy_url": null
-      },
-      "chat_ids": {
-        "admins": [
-          {
-            "id": -1,
-            "name": "YOUR-CHANNEL-NAME (As a comment. ONLY ID MATTERS)"
-          }
-        ],
-        "mods": [],
-        "users": []
       }
     },
-    "chunk_size": 48000000,
+    "chunk_size": 18874368,
     "path_check_interval": 6,
     "log": {
       "core": {
