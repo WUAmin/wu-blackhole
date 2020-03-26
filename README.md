@@ -9,6 +9,9 @@ After emptying queue, a encrypted backup of database will be uploaded to the bla
 to update client's database, you can copy/past code in the last message with tag of #WBHBackup. 
 Client with ask for `backup_pass` and download, decrypt and update your database. 
 
+
+
+
 ## Temp for final doc
 
 #### Log Level
@@ -28,26 +31,29 @@ Client with ask for `backup_pass` and download, decrypt and update your database
 
 
 ### GUI Client
+
+
+
+#### Screenshots
+|   | |
+|--------|:----:|
+|![explorer tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/explorer-tab.png)  | ![settings tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/settings-tab.png)|
+|![restore database](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/restore-database.png)    |  ![input password](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/input-password.png)|
+
+
+
 #### Linux
-~~
-Builing AppImage using Ubuntu 16.04 on docker. ([for more information](https://docs.beeware.org/en/latest/tutorial/tutorial-3.html#creating-your-application-scaffold))
-This `_linux-build.sh` remove old builds.
+~~Builing AppImage using Ubuntu 16.04 on docker. ([for more information](https://docs.beeware.org/en/latest/tutorial/tutorial-3.html#creating-your-application-scaffold))
+This `_linux-build.sh` remove old builds.~~
 ```bash
 cd docker
 docker image build -t blackholeguiclient .
 docker run -it -v /path/to/root/of/project:/project --privileged blackholeguiclient
 ```
-* you have to pass your project forlder to docker ( _/path/to/root/of/project_ )
-* `--privileged` is necessary or you will get error on docker:
+* ~~you have to pass your project forlder to docker ( _/path/to/root/of/project_ )~~
+* `--privileged` ~~is necessary or you will get error on docker:~~
   ```
   fusermount: mount failed: Operation not permitted
   ```
-~~
   
-
-## Screenshots
-|   | |
-|--------|:----:|
-|![explorer tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/explorer-tab.png)  | ![settings tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/settings-tab.png)|
-|![restore database](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/restore-database.png)    |  ![input password](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/input-password.png)|
 
