@@ -6,7 +6,7 @@ import logging
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import noload, relationship, sessionmaker
+from sqlalchemy.orm import noload, relationship, sessionmaker, lazyload
 
 # from config import config
 from wublackhole.wbh_item import WBHChunk, WBHItem
@@ -91,11 +91,9 @@ class WBHDatabase:
             return f'WBHDbChunks {self.filename}'
 
 
-    def __init__(self, db_path, logger: logging.Logger, echo=False, log_level=logging.INFO):
+    def __init__(self, db_path, logger: logging.Logger, echo=False):
         self.logger = logger
         self._db_path = db_path
-
-        logging.getLogger('sqlalchemy.engine.base.Engine').setLevel(log_level)
 
         # Check existance of db variable
         if 'engine' not in locals():
@@ -262,6 +260,20 @@ class WBHDatabase:
                                      .format(item_wbhi.full_path, str(e)))
 
 
+    def get_item_by_id(self, blackhole_id, item_id) -> WBHDbItems:
+        try:
+            self.logger.debug("🕐 Get item by id `{}` from database".format(item_id))
+            session = self.Session()
+            # get item from database
+            return session.query(self.WBHDbItems) \
+                .filter_by(blackhole_id=blackhole_id, id=item_id) \
+                .options(lazyload(self.WBHDbItems.chunks)) \
+                .first()
+        except Exception as e:
+            self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
+                              .format(item_id, str(e)))
+
+
     def get_chunks_by_item_id(self, blackhole_id, item_id):
         try:
             self.logger.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
@@ -272,7 +284,7 @@ class WBHDatabase:
                 .all()
         except Exception as e:
             self.logger.error("  ❌ ERROR: Can not get chunks for item id `{}` on database:\n {}"
-                                     .format(item_id, str(e)))
+                              .format(item_id, str(e)))
 
 
     def __exit__(self, exc_type, exc_value, traceback):

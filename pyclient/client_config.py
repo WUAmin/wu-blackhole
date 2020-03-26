@@ -16,7 +16,7 @@ class ClientConfig:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [0, 2, 0]
+        self.version: list = [0, 3, 0]
 
         # Variables to keep on runtime
         self.Database: WBHDatabase = None
@@ -127,8 +127,7 @@ class ClientConfig:
 
     def init_database(self):
         if os.path.exists(client.client['db_filepath']):
-            self.Database = WBHDatabase(db_path=client.client['db_filepath'], logger=self.logger_client, echo=True,
-                                        log_level=self.client['log']['client']['level'])
+            self.Database = WBHDatabase(db_path=client.client['db_filepath'], logger=self.logger_client, echo=False)
         else:
             self.Database = None
 

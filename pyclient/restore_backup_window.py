@@ -14,9 +14,9 @@ from common.helper import ChecksumType, EncryptionType, chacha20poly1305_decrypt
 from pyclient.client_config import client
 
 
-class RestoreBackupWindow(QDialog):
+class RestoreBackupDialog(QObject):
     def __init__(self, db_code: str, *args, **kwargs):
-        super(RestoreBackupWindow, self).__init__(*args, **kwargs)
+        super(RestoreBackupDialog, self).__init__(*args, **kwargs)
         # Load the .ui file
         ui_file = QFile("pyclient/restore_backup_window.ui")
         ui_file.open(QFile.ReadOnly)

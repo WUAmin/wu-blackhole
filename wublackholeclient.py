@@ -7,7 +7,7 @@ from PySide2.QtWidgets import QApplication
 from appdirs import user_config_dir
 
 from pyclient.client_config import client
-from pyclient.main_window import WUBlackHoleClient
+from pyclient.main_window import ClientMainWindow
 
 
 def init_confg_dir():
@@ -29,7 +29,7 @@ def init_confg_dir():
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     init_confg_dir()
-    main_window = WUBlackHoleClient()
+    main_window = ClientMainWindow()
     # main_window.show()
 
     # sys.exit(app.exec_())
