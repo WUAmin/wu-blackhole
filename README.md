@@ -46,8 +46,8 @@ docker run -it -v /path/to/root/of/project:/project --privileged blackholeguicli
   
 
 ## Screenshots
-![explorer tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/explorer-tab.png)
-![settings tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/settings-tab.png)
-![restore database](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/restore-database.png)
-![input password](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/input-password.png)
+|   | |
+|--------|:----:|
+|![explorer tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/explorer-tab.png)  | ![settings tab](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/settings-tab.png)|
+|![restore database](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/restore-database.png)    |  ![input password](https://raw.githubusercontent.com/WUAmin/wu-blackhole/master/Docs/input-password.png)|
 
