@@ -480,6 +480,9 @@ class ClientMainWindow(QMainWindow):
                     else:
                         raise Exception("Could not download chunk#{} by name of `{}` from BlackHole"
                                         .format(chunk.index, chunk.filename))
+                    # Remove chunk file if exist
+                    if os.path.exists(chunk_filepath):
+                        os.remove(chunk_filepath)
 
                 if is_error == 0:
                     # Match file checksum
