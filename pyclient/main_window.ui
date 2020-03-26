@@ -128,9 +128,6 @@ QPushButton {
           <property name="selectionBehavior">
            <enum>QAbstractItemView::SelectRows</enum>
           </property>
-          <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-           <bool>true</bool>
-          </attribute>
           <attribute name="horizontalHeaderStretchLastSection">
            <bool>true</bool>
           </attribute>
@@ -140,7 +137,20 @@ QPushButton {
          </widget>
         </item>
         <item row="4" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0">
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QLineEdit" name="filter_le">
+            <property name="placeholderText">
+             <string>Filter items using regex ...</string>
+            </property>
+           </widget>
+          </item>
           <item>
            <layout class="QVBoxLayout" name="verticalLayout">
             <property name="spacing">

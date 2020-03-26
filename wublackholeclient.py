@@ -26,6 +26,10 @@ def init_confg_dir():
         client.init_config()
 
 
+
+
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     init_confg_dir()

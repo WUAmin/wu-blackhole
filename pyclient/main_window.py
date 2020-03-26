@@ -6,7 +6,7 @@ from PySide2 import QtWidgets
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import QDialog, QMainWindow, QMessageBox
+from PySide2.QtWidgets import QDialog, QMessageBox
 
 from common.helper import ChecksumType, EncryptionType, chacha20poly1305_decrypt_data, get_checksum_sha256, \
     get_checksum_sha256_file, get_checksum_sha256_folder, sizeof_fmt
@@ -22,10 +22,31 @@ from pyclient.restore_backup_window import RestoreBackupDialog
 # from PyQt5.QtWidgets import QApplication
 # from PyQt5.QtWidgets import QMainWindow
 
+class ExplorerTableProxyModel(QSortFilterProxyModel):
+    def __init__(self, *args, **kwargs):
+        QSortFilterProxyModel.__init__(self, *args, **kwargs)
+        self.filters = {}
 
-class TableModel(QAbstractTableModel):
+
+    def setFilterByColumn(self, regex, column):
+        self.filters[column] = regex
+        self.invalidateFilter()
+
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        for key, regex in self.filters.items():
+            ix = self.sourceModel().index(source_row, key, source_parent)
+            if ix.isValid():
+                text = self.sourceModel().data(ix, Qt.DisplayRole)
+                # Check if pattern match with text
+                if regex.indexIn(text) < 0:
+                    return False
+        return True
+
+
+class ExplorerTableModel(QAbstractTableModel):
     def __init__(self, data, header):
-        super(TableModel, self).__init__()
+        super(ExplorerTableModel, self).__init__()
         self._data = data
         self.header = header
 
@@ -63,6 +84,8 @@ class TableModel(QAbstractTableModel):
     def columnCount(self, index):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
+        if len(self._data) <= 0:
+            return 0
         return len(self._data[0])
 
 
@@ -106,6 +129,8 @@ class ClientMainWindow(QObject):
         self.dl_progress.setVisible(False)
         self.dl_progress_folder = self.window.findChild(QtWidgets.QProgressBar, 'dl_progress_folder')
         self.dl_progress_folder.setVisible(False)
+        self.filter_le = self.window.findChild(QtWidgets.QLineEdit, 'filter_le')
+        self.filter_le.textChanged.connect(self.on_filter_le_text_changed)
 
         # Load settings tab values from config
         self.reload_settings_tab()
@@ -155,9 +180,12 @@ class ClientMainWindow(QObject):
             bh: WBHDatabase.WBHDbBlackHoles
             for bh in blackholes:
                 self.explorer_data.append(['__BH', bh.name, sizeof_fmt(bh.size), bh.id])
-            self.model: TableModel = TableModel(data=self.explorer_data, header=[' ', 'Blackhole', 'Total Size', 'ID'])
-            self.explorer_table.setModel(self.model)
-            for ih in range(len(self.model.header)):
+            self.explorer_model = ExplorerTableModel(data=self.explorer_data,
+                                                     header=[' ', 'Blackhole', 'Total Size', 'ID'])
+            self.explorer_proxy_model = ExplorerTableProxyModel(self)
+            self.explorer_proxy_model.setSourceModel(self.explorer_model)
+            self.explorer_table.setModel(self.explorer_proxy_model)
+            for ih in range(len(self.explorer_model.header)):
                 self.explorer_table.resizeColumnToContents(ih)
             self.addressbar_add(name="ROOT", db_id=-2, blackhole_id=None)
 
@@ -174,11 +202,13 @@ class ClientMainWindow(QObject):
                 else:
                     self.explorer_data.append(
                         [os.path.splitext(itm.filename)[1], itm.filename, sizeof_fmt(itm.size), itm.id])
-            self.model = TableModel(data=self.explorer_data, header=[' ', 'Name', 'Size', 'ID'])
-            self.explorer_table.setModel(self.model)
+            self.explorer_model = ExplorerTableModel(data=self.explorer_data, header=[' ', 'Name', 'Size', 'ID'])
+            self.explorer_proxy_model = ExplorerTableProxyModel(self)
+            self.explorer_proxy_model.setSourceModel(self.explorer_model)
+            self.explorer_table.setModel(self.explorer_proxy_model)
             selection = self.explorer_table.selectionModel()
             selection.currentChanged.connect(self.on_explorer_table_current_changed)
-            for ih in range(len(self.model.header)):
+            for ih in range(len(self.explorer_model.header)):
                 self.explorer_table.resizeColumnToContents(ih)
 
 
@@ -213,13 +243,17 @@ class ClientMainWindow(QObject):
             blackhole_id = self.explorer_table.property('blackhole_id')
             if blackhole_id is None:
                 # Loading root of blackhole
-                blackhole_id = self.explorer_data[clickedIndex.row()][3]  # get blackhole id
-                self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=-1, blackhole_id=blackhole_id)
+                # blackhole_id = self.explorer_data[clickedIndex.row()][3]  # get blackhole id
+                blackhole_id = clickedIndex.siblingAtColumn(3).data()  # get blackhole id
+                # self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=-1, blackhole_id=blackhole_id)
+                self.addressbar_add(name=clickedIndex.siblingAtColumn(1).data(), db_id=-1, blackhole_id=blackhole_id)
                 self.explorer_load_folder(blackhole_id=blackhole_id, item_id=None)
             else:
                 # Loading a folder in blackhole blackhole_id
-                item_id = self.explorer_data[clickedIndex.row()][3]  # get item id
-                self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=item_id,
+                # item_id = self.explorer_data[clickedIndex.row()][3]  # get item id
+                item_id = clickedIndex.siblingAtColumn(3).data()  # get item id
+                # self.addressbar_add(name=self.explorer_data[clickedIndex.row()][1], db_id=item_id,
+                self.addressbar_add(name=clickedIndex.siblingAtColumn(1).data(), db_id=item_id,
                                     blackhole_id=blackhole_id)
                 self.explorer_load_folder(blackhole_id=blackhole_id, item_id=item_id)
 
@@ -248,10 +282,16 @@ class ClientMainWindow(QObject):
                                       item_id=target_btn.property('db_id'))
 
 
+    def on_filter_le_text_changed(self, text: str):
+        self.explorer_proxy_model.setFilterByColumn(QRegExp(text, Qt.CaseInsensitive, QRegExp.RegExp), 1)
+        pass
+
+
     def on_download_pb_cliked(self):
         # Disable UI
         self.tab_widget.setDisabled(True)
         self.dl_progress.setVisible(True)
+        self.filter_le.setVisible(False)
         # Get selected row
         selected_row = self.explorer_table.selectedIndexes()
         # Ask where to save
@@ -277,6 +317,7 @@ class ClientMainWindow(QObject):
         self.tab_widget.setDisabled(False)
         self.dl_progress.setVisible(False)
         self.dl_progress_folder.setVisible(False)
+        self.filter_le.setVisible(True)
 
 
     def on_save_config_b_cliked(self):
