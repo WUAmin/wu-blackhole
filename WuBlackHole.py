@@ -1,19 +1,15 @@
 #!/usr/bin/python3from config import config
 
 # -*- coding: utf-8 -*-
+import argparse
 import os
 
-from config import config
-# import settings as settings
-from wublackhole.wbh_blackhole import WBHBlackHole
 from common.wbh_bot import WBHTelegramBot
 from common.wbh_db import WBHDatabase
+from config import config
+from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_watcher import start_watch
 
-
-# TODO: Add Ability to do Fernet encryption (key on db only)
-# TODO: ability to retrieve data
-# TODO: Flask/Vue.js for GUI
 
 def init_temp():
     # Clear leftover of old temp files
@@ -71,8 +67,22 @@ def init_WBH():
 
 def main():
     print(f'\nWU-Blackhole {config.version_str()}\n')
+
+    # Parse application arguments
+    parser = argparse.ArgumentParser(description='Send everything to WU-BlackHole using Telegram Bot')
+    parser.add_argument('--config', '-c',
+                        help='Specify path to configuration file. (Use config.json.example as template)')
+    args = parser.parse_args()
+    if args.config is not None:
+        # Config path is specified externally
+        config.config_filepath = os.path.abspath(args.config)
+    else:
+        # Default config file path
+        config.config_filepath = os.path.join(config.DataDir, "config.json")
+    del parser  # No reason to keep this variable
+    del args  # No reason to keep this variable
+
     # Load config
-    config.config_filepath = os.path.join(config.DataDir, "config.json")
     config.load()
     config.logger_core.info('')
     config.logger_core.info(f'WU-Blackhole {config.version_str()}')
@@ -96,5 +106,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#  📄📂📁🗂❌✅❎🔗ℹ️⚠❔❓🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛⏳⌛️⏱
