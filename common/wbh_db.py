@@ -6,9 +6,10 @@ import logging
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, create_engine
 from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import noload, relationship, sessionmaker, lazyload
+from sqlalchemy.orm import lazyload, noload, relationship, sessionmaker
 
 # from config import config
+from common.helper import sizeof_fmt
 from wublackhole.wbh_item import WBHChunk, WBHItem
 
 
@@ -107,11 +108,23 @@ class WBHDatabase:
     def get_db_filepath(self):
         return self._db_path
 
+
+    def add_blackhole(self, name: str, size: int, telegram_id: str):
+        bh_new = self.WBHDbBlackHoles(name=name,
+                                      size=size,
+                                      telegram_id=telegram_id)
+        session = self.Session()
+        session.add(bh_new)
+        session.commit()
+        return bh_new
+
+
     def get_blackholes(self):
         session = self.Session()
         return session.query(self.WBHDbBlackHoles) \
             .options(noload(self.WBHDbBlackHoles.items)) \
             .all()
+
 
     def get_blackhole_by_name(self, name: str):
         session = self.Session()
@@ -123,28 +136,25 @@ class WBHDatabase:
 
     def get_blackhole_by_id(self, _id):
         session = self.Session()
-        # return session.query(self.WBHDbBlackHoles).options(noload('items')).filter_by(id=_id).first()
         return session.query(self.WBHDbBlackHoles).options(noload(self.WBHDbBlackHoles.items)).filter_by(id=_id).first()
 
 
-    def get_items_by_parent_id(self, blackhole_id, items_parent=None):
-        session = self.Session()
-        return session.query(self.WBHDbItems) \
-            .options(noload(self.WBHDbItems.items)) \
-            .options(noload(self.WBHDbItems.chunks)) \
-            .filter_by(blackhole_id=blackhole_id, parent_id=items_parent) \
-            .all()
-
-
-    def add_blackhole(self, name: str, size: int, telegram_id: str):
-        bh_new = self.WBHDbBlackHoles(name=name,
-                                      size=size,
-                                      telegram_id=telegram_id)
-        session = self.Session()
-        session.add(bh_new)
-        session.commit()
-        # print(bh_new)
-        return bh_new
+    def recalculate_blackhole_size(self, bh_id):
+        try:
+            session = self.Session()
+            bh: WBHDatabase.WBHDbBlackHoles = session.query(WBHDatabase.WBHDbBlackHoles) \
+                .options(lazyload(WBHDatabase.WBHDbItems.items)) \
+                .filter_by(id=bh_id) \
+                .first()
+            bh.size = 0
+            itm: WBHDatabase.WBHDbItems
+            for itm in bh.items:
+                bh.size += itm.size
+            session.commit()
+            self.logger.debug("Blackhole `{}` size recalculated: {}".format(bh.name, sizeof_fmt(bh.size)))
+        except Exception as e:
+            self.logger.error(
+                "  ❌ ERROR: could not recalculate blackhole by id of {}:\n {}".format(bh_id, str(e)))
 
 
     def add_item_folder(self, item: WBHItem, blackhole_id, parent_item):
@@ -188,29 +198,56 @@ class WBHDatabase:
             session.add(new_item)
             session.commit()
             self.logger.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
+            # TODO: Remove it. It's just for refreshing blackhole size
+            self.recalculate_blackhole_size(bh_id=blackhole_id)
         except Exception as e:
             self.logger.error(
                 "  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
-
-        # if not item_wbhi.is_dir:
-        #     # Add all chunks to Database
-        #     ch: WBHChunk
-        #     try:
-        #         session = self.Session()
-        #         for ch in item_wbhi.chunks:
-        #             new_ch = self.WBHDbChunks(msg_id=ch.msg_id,
-        #                                       filename=ch.filename,
-        #                                       size=ch.size,
-        #                                       index=ch.index,
-        #                                       blackhole_id=blackhole_id,
-        #                                       items_id=new_item.id)
-        #             # Add/Commit item to database
-        #             session.add(new_ch)
-        #         session.commit()
-        #     except Exception as e:
-        #         self.logger.error("  ❌ ERROR: Can not add chunks of `{}` to database:\n {}"
-        #                                  .format(item_wbhi.full_path, str(e)))
         return new_item.id if new_item else None
+
+
+    def get_items_by_parent_id(self, blackhole_id, items_parent=None):
+        session = self.Session()
+        return session.query(self.WBHDbItems) \
+            .options(noload(self.WBHDbItems.items)) \
+            .options(noload(self.WBHDbItems.chunks)) \
+            .filter_by(blackhole_id=blackhole_id, parent_id=items_parent) \
+            .all()
+
+
+    def get_item_by_id(self, blackhole_id, item_id) -> WBHDbItems:
+        try:
+            self.logger.debug("🕐 Get item by id `{}` from database".format(item_id))
+            session = self.Session()
+            # get item from database
+            return session.query(self.WBHDbItems) \
+                .filter_by(blackhole_id=blackhole_id, id=item_id) \
+                .options(lazyload(self.WBHDbItems.chunks)) \
+                .options(lazyload(self.WBHDbItems.items)) \
+                .first()
+        except Exception as e:
+            self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
+                              .format(item_id, str(e)))
+
+
+    def update_item_chunk_count(self, item_wbhi: WBHItem, chunk_count):
+        try:
+            self.logger.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
+            session = self.Session()
+
+            # Add/Commit item to database
+            item_db = session.query(self.WBHDbItems) \
+                .options(noload(self.WBHDbItems.items)) \
+                .options(noload(self.WBHDbItems.chunks)) \
+                .filter_by(id=item_wbhi.db_id) \
+                .first()
+            item_db.chunks_count = chunk_count
+            session.commit()
+            self.logger.debug(
+                "✅ chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
+        except Exception as e:
+            self.logger.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
+                              .format(item_wbhi.full_path, str(e)))
 
 
     def add_chunk(self, chunk: WBHChunk, blackhole_id, parent_id):
@@ -238,41 +275,6 @@ class WBHDatabase:
             self.logger.error(
                 "  ❌ ERROR: Can not add  chunk#{} of `{}` to database:\n {}".format(chunk.index, chunk.org_filename, str(e)))
         return new_chunk.id if new_chunk else None
-
-
-    def update_item_chunk_count(self, item_wbhi: WBHItem, chunk_count):
-        try:
-            self.logger.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
-            session = self.Session()
-
-            # Add/Commit item to database
-            item_db = session.query(self.WBHDbItems) \
-                .options(noload(self.WBHDbItems.items)) \
-                .options(noload(self.WBHDbItems.chunks)) \
-                .filter_by(id=item_wbhi.db_id) \
-                .first()
-            item_db.chunks_count = chunk_count
-            session.commit()
-            self.logger.debug(
-                "✅ chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
-        except Exception as e:
-            self.logger.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
-                                     .format(item_wbhi.full_path, str(e)))
-
-
-    def get_item_by_id(self, blackhole_id, item_id) -> WBHDbItems:
-        try:
-            self.logger.debug("🕐 Get item by id `{}` from database".format(item_id))
-            session = self.Session()
-            # get item from database
-            return session.query(self.WBHDbItems) \
-                .filter_by(blackhole_id=blackhole_id, id=item_id) \
-                .options(lazyload(self.WBHDbItems.chunks)) \
-                .options(lazyload(self.WBHDbItems.items)) \
-                .first()
-        except Exception as e:
-            self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
-                              .format(item_id, str(e)))
 
 
     def get_chunks_by_item_id(self, blackhole_id, item_id):
