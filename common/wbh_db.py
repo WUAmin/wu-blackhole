@@ -142,8 +142,8 @@ class WBHDatabase:
     def recalculate_blackhole_size(self, bh_id):
         try:
             session = self.Session()
-            bh: WBHDatabase.WBHDbBlackHoles = session.query(WBHDatabase.WBHDbBlackHoles) \
-                .options(lazyload(WBHDatabase.WBHDbItems.items)) \
+            bh: WBHDatabase.WBHDbBlackHoles = session.query(self.WBHDbBlackHoles) \
+                .options(lazyload(self.WBHDbBlackHoles.items)) \
                 .filter_by(id=bh_id) \
                 .first()
             bh.size = 0
@@ -198,7 +198,7 @@ class WBHDatabase:
             session.add(new_item)
             session.commit()
             self.logger.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
-            # TODO: Remove it. It's just for refreshing blackhole size
+            # TODO: Replace it with adding this item size to blackhole size it.
             self.recalculate_blackhole_size(bh_id=blackhole_id)
         except Exception as e:
             self.logger.error(
