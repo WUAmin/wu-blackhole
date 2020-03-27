@@ -11,12 +11,12 @@ class Config:
 
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
-        self.version: list = [1, 0, 1]  # TODO: Check version difference between config.json and config.py, major/minor
+        self.version: list = [1, 1, 1]  # TODO: Check version difference between config.json and config.py, major/minor
 
         # Load from config.json
         self.core: dict = {
             "temp_dir": os.path.join(tempfile.gettempdir(), "WBH-temp"),
-            "db_filename": "wbh.db",
+            "db_filepath": "config/wbh.db",
             "backup_pass": os.urandom(16).hex(),
             "blackhole_config_filename": ".__WBH__.json",
             "blackhole_queue_dirname": ".WBH_QUEUE",
@@ -37,34 +37,22 @@ class Config:
             "chunk_size": 18874368,
             "path_check_interval": 3,
             "log": {
-                "core": {
-                    "level": 10
-                },
-                "bot": {
-                    "level": 20
-                }
+                "filepath": "config/blackhole.log",
+                "core_level": 10,
+                "bot_level": 20
             }
         }
 
-        # Variables to keep on runtime
-        self.Database: common.wbh_db.WBHDatabase = None
-        self.BlackHoles: list = []
-        self.TelegramBot: common.wbh_bot.WBHTelegramBot = None
-        self.config_filepath = None
-        self.need_backup: bool = False
-
-        # create logger with 'blackhole_core'
-        console = logging.StreamHandler()
-        file_handler = logging.FileHandler("core.log", "w")
-        # noinspection PyArgumentList
-        logging.basicConfig(level=self.core['log']['core']['level'],
-                            format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
-                            handlers=[file_handler, console])
         self.logger_core = logging.getLogger('core')
         self.logger_bot = logging.getLogger('bot')
 
-        # Generating config based on config.json
-        self.DataDir = os.path.join(os.path.split(os.path.realpath(__file__))[0], "config")
+        # Variables to keep on runtime
+        self.Database = None
+        self.BlackHoles: list = []
+        self.TelegramBot = None
+        self.config_filepath = None
+        self.need_backup: bool = False
+
         # self.config_filepath = config_filepath
         self.init_config()
 
@@ -77,8 +65,21 @@ class Config:
         """ Generating some of config based on config.json """
 
         # Update log config
-        self.logger_core.setLevel(self.core['log']['core']['level'])
-        self.logger_bot.setLevel(self.core['log']['bot']['level'])
+        # create logger with 'blackhole_core'
+        console = logging.StreamHandler()
+        if os.path.exists(os.path.dirname(self.core['log']['filepath'])):
+            file_handler = logging.FileHandler(self.core['log']['filepath'], "wt")
+            # noinspection PyArgumentList
+            logging.basicConfig(level=self.core['log']['core_level'],
+                                format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
+                                handlers=[file_handler, console])
+        else:
+            # noinspection PyArgumentList
+            logging.basicConfig(level=self.core['log']['core_level'],
+                                format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
+                                handlers=[console])
+        self.logger_core.setLevel(self.core['log']['core_level'])
+        self.logger_bot.setLevel(self.core['log']['bot_level'])
 
 
     def save(self):

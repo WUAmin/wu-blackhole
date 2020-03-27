@@ -147,8 +147,8 @@ class ClientMainWindow(QObject):
         self.api_le.setText(client.client['bot']['api'])
         self.db_path_le.setText(client.client['db_filepath'])
         self.keep_db_sp.setValue(client.client['keep_db_backup'])
-        self.client_log_level_cb.setCurrentIndex((client.client['log']['client']['level'] / 10) - 1)
-        self.bot_log_level_cb.setCurrentIndex((client.client['log']['bot']['level'] / 10) - 1)
+        self.client_log_level_cb.setCurrentIndex((client.client['log']['client_level'] / 10) - 1)
+        self.bot_log_level_cb.setCurrentIndex((client.client['log']['bot_level'] / 10) - 1)
 
 
     def check_database_avalibility(self):
@@ -343,8 +343,8 @@ class ClientMainWindow(QObject):
         client.client['bot']['api'] = self.api_le.text()
         client.client['keep_db_backup'] = self.keep_db_sp.value()
         client.client['db_filepath'] = self.db_path_le.text()
-        client.client['log']['client']['level'] = (self.client_log_level_cb.currentIndex() + 1) * 10
-        client.client['log']['bot']['level'] = (self.bot_log_level_cb.currentIndex() + 1) * 10
+        client.client['log']['client_level'] = (self.client_log_level_cb.currentIndex() + 1) * 10
+        client.client['log']['bot_level'] = (self.bot_log_level_cb.currentIndex() + 1) * 10
         client.save()
 
         if 'rb_window' in locals():

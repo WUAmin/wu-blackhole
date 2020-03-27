@@ -148,7 +148,7 @@ def move_to_queue(bh, item_wpi: WBHItem):
             config.logger_core.error(f"  ❌ ERROR: Can not move `{item_wpi.filename}` to queue directory:\n {str(e)}")
 
 
-def start_watch(bh, run_counts: int = None):
+def start_watch(bh):
     items = []
     while True:
         start_t = time.process_time()
@@ -190,13 +190,13 @@ def start_watch(bh, run_counts: int = None):
         # Empty the Queue by sending to BlackHole
         bh.queue.process_queue(bh.telegram_id)
 
-        if run_counts:
-            run_counts -= 1
-            if run_counts <= 0:
-                break
-        else:
-            config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
-            time.sleep(config.core['path_check_interval'])
+        # if run_counts:
+        #     run_counts -= 1
+        #     if run_counts <= 0:
+        #         break
+        # else:
+        config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
+        time.sleep(config.core['path_check_interval'])
 
         # Break the loop if there is items there. Let application process blackholes
         if len(items) <= 0:

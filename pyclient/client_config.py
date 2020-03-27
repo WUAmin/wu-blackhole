@@ -16,7 +16,7 @@ class ClientConfig:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [0, 3, 0]
+        self.version: list = [1, 0, 0]
 
         # Variables to keep on runtime
         self.Database: WBHDatabase = None
@@ -46,12 +46,8 @@ class ClientConfig:
                 },
             },
             "log": {
-                "client": {
-                    "level": 10
-                },
-                "bot": {
-                    "level": 20
-                }
+                "client_level": 10,
+                "bot_level": 20
             }
         }
 
@@ -59,7 +55,7 @@ class ClientConfig:
         console = logging.StreamHandler()
         file_handler = logging.FileHandler("client.log", "w")
         # noinspection PyArgumentList
-        logging.basicConfig(level=self.client['log']['client']['level'],
+        logging.basicConfig(level=self.client['log']['client_level'],
                             format='%(asctime)-15s: %(name)-4s: %(levelname)-7s %(message)s',
                             handlers=[file_handler, console])
         self.logger_client = logging.getLogger('client')
@@ -75,8 +71,8 @@ class ClientConfig:
     def init_config(self):
         """ Generating some of config based on config.json """
         # Update log config
-        self.logger_client.setLevel(self.client['log']['client']['level'])
-        self.logger_bot.setLevel(self.client['log']['bot']['level'])
+        self.logger_client.setLevel(self.client['log']['client_level'])
+        self.logger_bot.setLevel(self.client['log']['bot_level'])
 
         # # Database
         # print(self.config_dirpath)
@@ -136,7 +132,7 @@ class ClientConfig:
     def init_bot(self, api, proxy=None):
         if api:
             self.TelegramBot = WBHTelegramBot(api=api, logger=self.logger_bot, proxy=proxy,
-                                              log_level=self.client['log']['bot']['level'])
+                                              log_level=self.client['log']['bot_level'])
         else:
             self.TelegramBot = None
 

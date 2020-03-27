@@ -1,27 +1,27 @@
 {
   "version": [
     1,
-    0,
+    1,
     0
   ],
   "blackholes": [
     {
       "id": null,
       "dirpath": "BLACKHOLE-DIRECTORY-PATH",
-      "name": "BLACKHOLE-NAME (changing name, create a new blackhole in database)",
-      "telegram_id": "-1",
+      "name": "BLACKHOLE-NAME",
+      "telegram_id": "000000",
       "encryption_type": "NONE or ChaCha20Poly1305",
       "encryption_pass": "PASSWORD-TO-RECOVER-YOUR-FILES"
     }
   ],
   "core": {
     "temp_dir": ".temp",
-    "db_filename": "wbh.db",
+    "db_filepath": "config/wbh.db",
     "backup_pass": "PASSWORD-TO-RECOVER-DATABASE-FILE-BLACKHOLE",
     "blackhole_config_filename": ".__WBH__.json",
     "blackhole_queue_dirname": ".WBH_QUEUE",
     "bot": {
-      "api": "YOUR-BOT-ID",
+      "api": "YOUR-BOT-API",
       "proxy": {
         "proxy_url": null
       }
@@ -29,12 +29,9 @@
     "chunk_size": 18874368,
     "path_check_interval": 6,
     "log": {
-      "core": {
-        "level": 20
-      },
-      "bot": {
-        "level": 20
-      }
+        "filepath": "config/blackhole.log",
+        "core_level": 20,
+        "bot_level": 30
     }
   }
 }

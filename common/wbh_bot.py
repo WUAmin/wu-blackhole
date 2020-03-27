@@ -10,7 +10,7 @@ from telegram.ext import Updater
 from common.helper import ChecksumType, EncryptionType, chacha20poly1305_encrypt_data, get_checksum_sha256
 # from config import config
 from common.helper import sizeof_fmt
-from common.wbh_db import WBHDatabase
+from common.wbh_db import WBHDbChunks
 from wublackhole.wbh_blackhole import WBHBlackHole
 from wublackhole.wbh_item import QueueState, WBHChunk, WBHItem
 
@@ -175,12 +175,10 @@ class WBHTelegramBot:
         return file.download(path_to_save)
 
 
-    def get_chunk(self, chunk: WBHDatabase.WBHDbChunks, path_to_save: str):
+    def get_chunk(self, chunk: WBHDbChunks, path_to_save: str):
         try:
             return self.get_file_by_id(chunk.file_id, path_to_save)
         except Exception as e:
             self.logger.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
                               .format(chunk.index, chunk.filename, str(e)))
         return None
-
-    

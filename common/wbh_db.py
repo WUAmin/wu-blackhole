@@ -8,90 +8,87 @@ from sqlalchemy.dialects.sqlite import SMALLINT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import lazyload, noload, relationship, sessionmaker
 
-# from config import config
 from common.helper import sizeof_fmt
 from wublackhole.wbh_item import WBHChunk, WBHItem
 
 
+Base = declarative_base()
+
+
+class WBHDbItems(Base):
+    __tablename__ = 'items'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    filename = Column(String)
+    is_dir = Column(Boolean)
+    size = Column(BigInteger)
+    items_count = Column(BigInteger)
+    chunks_count = Column(BigInteger)
+    checksum = Column(String)
+    checksum_type = Column(SMALLINT)
+    root_path = Column(String)
+    full_path = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    modified_at = Column(DateTime, default=datetime.datetime.utcnow)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # blackhole - One To Many
+    blackhole_id = Column(BigInteger, ForeignKey('blackholes.id'))
+    parent_blackhole = relationship('WBHDbBlackHoles', back_populates="items")
+    # items - One To Many
+    parent_id = Column(BigInteger, ForeignKey('items.id'))
+    parent_item = relationship('WBHDbItems')
+    items = relationship("WBHDbItems")
+    # chunks - One To Many
+    chunks = relationship("WBHDbChunks", back_populates="parent_item")
+
+
+    def __repr__(self):
+        return f'WBHDbItems {self.filename}'
+
+
+class WBHDbChunks(Base):
+    __tablename__ = 'chunks'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    msg_id = Column(BigInteger)
+    file_id = Column(String)
+    filename = Column(String)
+    size = Column(BigInteger)
+    index = Column(BigInteger)
+    checksum = Column(String)
+    checksum_type = Column(SMALLINT)
+    encryption = Column(SMALLINT)
+    encryption_data = Column(String)
+    uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # blackhole - One To Many
+    blackhole_id = Column(BigInteger, ForeignKey('blackholes.id'))
+    parent_blackhole = relationship('WBHDbBlackHoles')
+    # item - One To Many
+    items_id = Column(BigInteger, ForeignKey('items.id'))
+    parent_item = relationship('WBHDbItems', back_populates="chunks")
+
+
+    def __repr__(self):
+        return f'WBHDbChunks {self.filename}'
+
+
+class WBHDbBlackHoles(Base):
+    __tablename__ = 'blackholes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String)
+    size = Column(BigInteger)
+    telegram_id = Column(String)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # items - One To Many
+    items = relationship("WBHDbItems", back_populates="parent_blackhole")
+
+
+    def __repr__(self):
+        return f'WBHDbBlackHoles {self.name}'
+
+
 class WBHDatabase:
-    TOP_PARENT = 'WBH_ROOT'
-
-    Base = declarative_base()
-
-
-    class WBHDbBlackHoles(Base):
-        __tablename__ = 'blackholes'
-
-        id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-        name = Column(String)
-        size = Column(BigInteger)
-        telegram_id = Column(String)
-        created_at = Column(DateTime, default=datetime.datetime.utcnow)
-        # items - One To Many
-        items = relationship("WBHDbItems", back_populates="parent_blackhole")
-
-
-        def __repr__(self):
-            return f'WBHDbBlackHoles {self.name}'
-
-
-    class WBHDbItems(Base):
-        __tablename__ = 'items'
-
-        id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-        filename = Column(String)
-        is_dir = Column(Boolean)
-        size = Column(BigInteger)
-        items_count = Column(BigInteger)
-        chunks_count = Column(BigInteger)
-        checksum = Column(String)
-        checksum_type = Column(SMALLINT)
-        root_path = Column(String)
-        full_path = Column(String)
-        created_at = Column(DateTime, default=datetime.datetime.utcnow)
-        modified_at = Column(DateTime, default=datetime.datetime.utcnow)
-        uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
-        # blackhole - One To Many
-        blackhole_id = Column(BigInteger, ForeignKey('blackholes.id'))
-        parent_blackhole = relationship('WBHDbBlackHoles', back_populates="items")
-        # items - One To Many
-        parent_id = Column(BigInteger, ForeignKey('items.id'))
-        parent_item = relationship('WBHDbItems')
-        items = relationship("WBHDbItems")
-        # chunks - One To Many
-        chunks = relationship("WBHDbChunks", back_populates="parent_item")
-
-
-        def __repr__(self):
-            return f'WBHDbItems {self.filename}'
-
-
-    class WBHDbChunks(Base):
-        __tablename__ = 'chunks'
-
-        id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-        msg_id = Column(BigInteger)
-        file_id = Column(String)
-        filename = Column(String)
-        size = Column(BigInteger)
-        index = Column(BigInteger)
-        checksum = Column(String)
-        checksum_type = Column(SMALLINT)
-        encryption = Column(SMALLINT)
-        encryption_data = Column(String)
-        uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
-        # blackhole - One To Many
-        blackhole_id = Column(BigInteger, ForeignKey('blackholes.id'))
-        parent_blackhole = relationship('WBHDbBlackHoles')
-        # item - One To Many
-        items_id = Column(BigInteger, ForeignKey('items.id'))
-        parent_item = relationship('WBHDbItems', back_populates="chunks")
-
-
-        def __repr__(self):
-            return f'WBHDbChunks {self.filename}'
-
-
     def __init__(self, db_path, logger: logging.Logger, echo=False):
         self.logger = logger
         self._db_path = db_path
@@ -102,7 +99,7 @@ class WBHDatabase:
             self.engine = create_engine('sqlite:///' + self._db_path, echo=echo)
             self.conn = self.engine.connect()
             self.Session = sessionmaker(bind=self.engine)
-            self.Base.metadata.create_all(self.engine)
+            Base.metadata.create_all(self.engine)
 
 
     def get_db_filepath(self):
@@ -110,7 +107,7 @@ class WBHDatabase:
 
 
     def add_blackhole(self, name: str, size: int, telegram_id: str):
-        bh_new = self.WBHDbBlackHoles(name=name,
+        bh_new = WBHDbBlackHoles(name=name,
                                       size=size,
                                       telegram_id=telegram_id)
         session = self.Session()
@@ -121,33 +118,33 @@ class WBHDatabase:
 
     def get_blackholes(self):
         session = self.Session()
-        return session.query(self.WBHDbBlackHoles) \
-            .options(noload(self.WBHDbBlackHoles.items)) \
+        return session.query(WBHDbBlackHoles) \
+            .options(noload(WBHDbBlackHoles.items)) \
             .all()
 
 
     def get_blackhole_by_name(self, name: str):
         session = self.Session()
-        return session.query(self.WBHDbBlackHoles) \
-            .options(noload(self.WBHDbBlackHoles.items)) \
+        return session.query(WBHDbBlackHoles) \
+            .options(noload(WBHDbBlackHoles.items)) \
             .filter_by(name=name) \
             .first()
 
 
     def get_blackhole_by_id(self, _id):
         session = self.Session()
-        return session.query(self.WBHDbBlackHoles).options(noload(self.WBHDbBlackHoles.items)).filter_by(id=_id).first()
+        return session.query(WBHDbBlackHoles).options(noload(WBHDbBlackHoles.items)).filter_by(id=_id).first()
 
 
     def recalculate_blackhole_size(self, bh_id):
         try:
             session = self.Session()
-            bh: WBHDatabase.WBHDbBlackHoles = session.query(self.WBHDbBlackHoles) \
-                .options(lazyload(self.WBHDbBlackHoles.items)) \
+            bh: WBHDbBlackHoles = session.query(WBHDbBlackHoles) \
+                .options(lazyload(WBHDbBlackHoles.items)) \
                 .filter_by(id=bh_id) \
                 .first()
             bh.size = 0
-            itm: WBHDatabase.WBHDbItems
+            itm: WBHDbItems
             for itm in bh.items:
                 bh.size += itm.size
             session.commit()
@@ -176,7 +173,7 @@ class WBHDatabase:
         try:
             self.logger.debug("🕐 Adding item `{}` to Database".format(item_wbhi.filename))
             session = self.Session()
-            new_item = self.WBHDbItems(filename=item_wbhi.filename,
+            new_item = WBHDbItems(filename=item_wbhi.filename,
                                        is_dir=item_wbhi.is_dir,
                                        size=item_wbhi.size,
                                        checksum=item_wbhi.checksum,
@@ -208,9 +205,9 @@ class WBHDatabase:
 
     def get_items_by_parent_id(self, blackhole_id, items_parent=None):
         session = self.Session()
-        return session.query(self.WBHDbItems) \
-            .options(noload(self.WBHDbItems.items)) \
-            .options(noload(self.WBHDbItems.chunks)) \
+        return session.query(WBHDbItems) \
+            .options(noload(WBHDbItems.items)) \
+            .options(noload(WBHDbItems.chunks)) \
             .filter_by(blackhole_id=blackhole_id, parent_id=items_parent) \
             .all()
 
@@ -220,10 +217,10 @@ class WBHDatabase:
             self.logger.debug("🕐 Get item by id `{}` from database".format(item_id))
             session = self.Session()
             # get item from database
-            return session.query(self.WBHDbItems) \
+            return session.query(WBHDbItems) \
                 .filter_by(blackhole_id=blackhole_id, id=item_id) \
-                .options(lazyload(self.WBHDbItems.chunks)) \
-                .options(lazyload(self.WBHDbItems.items)) \
+                .options(lazyload(WBHDbItems.chunks)) \
+                .options(lazyload(WBHDbItems.items)) \
                 .first()
         except Exception as e:
             self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
@@ -236,9 +233,9 @@ class WBHDatabase:
             session = self.Session()
 
             # Add/Commit item to database
-            item_db = session.query(self.WBHDbItems) \
-                .options(noload(self.WBHDbItems.items)) \
-                .options(noload(self.WBHDbItems.chunks)) \
+            item_db = session.query(WBHDbItems) \
+                .options(noload(WBHDbItems.items)) \
+                .options(noload(WBHDbItems.chunks)) \
                 .filter_by(id=item_wbhi.db_id) \
                 .first()
             item_db.chunks_count = chunk_count
@@ -256,7 +253,7 @@ class WBHDatabase:
         try:
             self.logger.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
             session = self.Session()
-            new_chunk = self.WBHDbChunks(msg_id=chunk.msg_id,
+            new_chunk = WBHDbChunks(msg_id=chunk.msg_id,
                                          file_id=chunk.file_id,
                                          filename=chunk.filename,
                                          size=chunk.size,
@@ -282,7 +279,7 @@ class WBHDatabase:
             self.logger.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
             session = self.Session()
             # get chunks from database
-            return session.query(self.WBHDbChunks) \
+            return session.query(WBHDbChunks) \
                 .filter_by(blackhole_id=blackhole_id, items_id=item_id) \
                 .all()
         except Exception as e:
@@ -296,3 +293,4 @@ class WBHDatabase:
         # if 'db' not in locals():
         #     # Close database
         #     self.db.close()
+        self.Session.close_all()
