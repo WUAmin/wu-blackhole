@@ -24,24 +24,6 @@ class WBHTelegramBot:
         logging.getLogger('telegram.vendor.ptb_urllib3.urllib3.util.retry').setLevel(logging.ERROR)
 
         self.updater = Updater(token=api, request_kwargs=proxy, use_context=True)
-        # dispatcher = self.updater.dispatcher
-
-        # Register /start
-        # cmd_start_handler = CommandHandler('start', self.cmd_start)
-        # dispatcher.add_handler(cmd_start_handler)
-
-        # Register /start
-        # cmd_id_handler = CommandHandler('id', self.cmd_id)
-        # dispatcher.add_handler(cmd_id_handler)
-
-        # Register all messages
-        # textmsg_handler = MessageHandler(Filters.text, textmsg, message_updates=True, channel_post_updates=False)
-        # dispatcher.add_handler(textmsg_handler)
-
-        # Register all messages
-        # allmsg_handler = MessageHandler(Filters.all, self.allmsg, message_updates=True, channel_post_updates=True)
-        # allmsg_handler = MessageHandler(Filters.all, self.allmsg)
-        # dispatcher.add_handler(allmsg_handler)
 
 
     def send_chunk(self, file_open, chunk: WBHChunk, telegram_id):
@@ -56,12 +38,12 @@ class WBHTelegramBot:
     def _send_chunk(self, file_open, filename, org_filepath, org_filename,
                     telegram_id, org_size=None, reply_to_message_id=None, disable_notification=True):
         cap_text = ""
-        if org_filename is not None:
-            cap_text += f"Original Name: `{org_filename}`\n"
-        if org_filepath is not None:
-            cap_text += f"Original Path: `{org_filepath}`\n"
-        if org_size is not None:
-            cap_text += "Original Size: `{}` (`{}`)\n".format(org_size, sizeof_fmt(org_size))
+        # if org_filename is not None:
+        #     cap_text += f"Original Name: `{org_filename}`\n"
+        # if org_filepath is not None:
+        #     cap_text += f"Original Path: `{org_filepath}`\n"
+        # if org_size is not None:
+        #     cap_text += "Original Size: `{}` (`{}`)\n".format(org_size, sizeof_fmt(org_size))
         cap_text += f"Filename: `{filename}`\n"
 
         res = None
@@ -107,27 +89,6 @@ class WBHTelegramBot:
                 # == There was a problem ==
                 self.logger.error(
                     "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
-
-    #
-    # def send_folder(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str):
-    #     """ return True on successfully sending all chunks of all items in the directory"""
-    #     # org_filepath_rel = org_filepath[len(config.core['temp_dir']):]
-    #     org_filepath_rel = os.path.join(*item_wbhi.parents, item_wbhi.filename)
-    #     print(f"🕑 Sending directory `{org_filepath_rel}`...")
-    #     try:
-    #         # Send all items in the directory
-    #         itm: WBHItem
-    #         for itm in item_wbhi.children:
-    #             if itm.is_dir:
-    #                 # Directory
-    #                 self.send_folder(itm, blackhole, chunk_size, temp_dir)
-    #             else:
-    #                 # File
-    #                 self.send_file(item_wbhi=itm, blackhole=blackhole, chunk_size=chunk_size, temp_dir=temp_dir)
-    #     except Exception as e:
-    #         print(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
-    #         return False
-    #     return True
 
 
     def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str,
