@@ -2,3 +2,4 @@ pycairo
 python-telegram-bot[socks]
 SQLAlchemy
 PySide2
+appdirs
