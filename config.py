@@ -11,8 +11,7 @@ class Config:
 
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
-        # Change on Minor version might need config manual config check...
-        self.version: list = [1, 0, 1]
+        self.version: list = [1, 0, 1]  # TODO: Check version difference between config.json and config.py, major/minor
 
         # Load from config.json
         self.core: dict = {
