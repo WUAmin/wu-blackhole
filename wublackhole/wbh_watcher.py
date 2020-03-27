@@ -5,8 +5,8 @@ import shutil
 import time
 from pathlib import Path
 
-from config import config
 from common.helper import sizeof_fmt
+from config import config
 from wublackhole.wbh_item import QueueState, WBHItem
 
 
@@ -185,6 +185,7 @@ def start_watch(bh, run_counts: int = None):
         for item in items:
             if item.state == QueueState.UNCHANGED:
                 move_to_queue(bh, item)
+                items.remove(item)
 
         # Empty the Queue by sending to BlackHole
         bh.queue.process_queue(bh.telegram_id)
@@ -196,3 +197,7 @@ def start_watch(bh, run_counts: int = None):
         else:
             config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
             time.sleep(config.core['path_check_interval'])
+
+        # Break the loop if there is items there. Let application process blackholes
+        if len(items) <= 0:
+            break
