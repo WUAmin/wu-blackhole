@@ -211,6 +211,14 @@ class WBHDatabase:
             .filter_by(blackhole_id=blackhole_id, parent_id=items_parent) \
             .all()
 
+    def get_items_by_filename(self, blackhole_id, filename):
+        session = self.Session()
+        return session.query(WBHDbItems) \
+            .options(noload(WBHDbItems.items)) \
+            .options(noload(WBHDbItems.chunks)) \
+            .filter_by(blackhole_id=blackhole_id, filename=filename) \
+            .all()
+
 
     def get_item_by_id(self, blackhole_id, item_id) -> WBHDbItems:
         try:
