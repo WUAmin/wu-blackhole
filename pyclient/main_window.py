@@ -138,8 +138,7 @@ class ClientMainWindow(QObject):
         # Check if there is any Database
         self.check_database_avalibility()
 
-        # Show Window
-        self.window.show()
+
 
 
 

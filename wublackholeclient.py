@@ -34,7 +34,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     init_confg_dir()
     main_window = ClientMainWindow()
-    # main_window.show()
+    # Show Window
+    main_window.window.show()
 
     # sys.exit(app.exec_())
     # Start the event loop.
