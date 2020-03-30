@@ -19,7 +19,6 @@ class WBHQueue:
         if os.path.exists(self.queue_file):
             self.load()
 
-
     def is_item_exist_list(self, item: WBHItem, items: list) -> WBHItem:
         """ return true if item exist in given list, Recursively """
         if item in items:
@@ -32,11 +31,9 @@ class WBHQueue:
                         return True
         return False
 
-
     def is_item_exist(self, item: WBHItem) -> bool:
         """ return true if item exist in queue list, Recursively """
         return self.is_item_exist_list(item, self.items)
-
 
     def get_item_by_qid_list(self, qid: int, items: list) -> WBHItem:
         """ return WBHItem if item exist with qid in given list, Recursively """
@@ -50,17 +47,14 @@ class WBHQueue:
                     return sub_item
         return None
 
-
     def get_item_by_qid(self, qid: int) -> WBHItem:
         """ return WBHItem if item exist with qid in queue list, Recursively """
         return self.get_item_by_qid_list(qid, self.items)
-
 
     def add(self, item: WBHItem):
         """ return true if added item successfully"""
         item.state = QueueState.INQUEUE
         self.items.append(item)
-
 
     def _remove_recursively(self, item: WBHItem, items: list):
         """ return true if removed item successfully"""
@@ -76,11 +70,9 @@ class WBHQueue:
                     return True
         return False
 
-
     def remove(self, item: WBHItem):
         """ return true if removed item successfully (Recursive)"""
         return self._remove_recursively(item, self.items)
-
 
     def save(self):
         """ return true if saved queue successfully to disk"""
@@ -91,7 +83,6 @@ class WBHQueue:
         except Exception as e:
             config.logger_core.error("  ❌ ERROR: Can not save queue to `{}`:\n {}".format(self.queue_file, str(e)))
         config.logger_core.debug("  ✅ Queue saved with {} items".format(len(self.items)))
-
 
     def load(self):
         """ return true if loaded queue successfully from disk"""
@@ -104,7 +95,6 @@ class WBHQueue:
         except Exception as e:
             config.logger_core.error("  ❌ ERROR: Can not load queue from `{}`:\n {}".format(self.queue_file, str(e)))
         config.logger_core.debug("  ✅ Queue loaded with {} items".format(len(self.items)))
-
 
     # def process_queue_list(self, telegram_id: str, items: list):
     #     """ Empty queue by sending items to BlackHole """
@@ -277,11 +267,9 @@ class WBHQueue:
 
         return everything_is_done
 
-
     def process_queue(self, telegram_id: str):
         """ Empty queue by sending items to BlackHole """
         return self.process_queue_list(telegram_id, self.items)
-
 
     def backup_database(self):
         config.logger_core.debug("🕑 Sending database backup to blackhole...")
