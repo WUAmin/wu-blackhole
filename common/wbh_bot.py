@@ -74,21 +74,21 @@ class WBHTelegramBot:
         with open(chunk.org_fullpath, 'rb') as chunk_file_r:
             # Read whole chunk file
             res = self.send_chunk(file_open=chunk_file_r, chunk=chunk, telegram_id=blackhole.telegram_id)
-            if res is not None:
-                # == sent to bot without any problem ==
-                chunk.msg_id = res.message_id
-                chunk.file_id = res.document.file_id
-                chunk.state = QueueState.DONE
-                self.logger.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
-                # Save queue
-                blackhole.queue.save()
-                # Remove chunk file
-                os.remove(chunk.org_fullpath)
-                self.logger.debug(f"  🕘 `{chunk.filename}` file removed.")
-            else:
-                # == There was a problem ==
-                self.logger.error(
-                    "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
+        if res is not None:
+            # == sent to bot without any problem ==
+            chunk.msg_id = res.message_id
+            chunk.file_id = res.document.file_id
+            chunk.state = QueueState.DONE
+            self.logger.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
+            # Save queue
+            blackhole.queue.save()
+            # Remove chunk file
+            os.remove(chunk.org_fullpath)
+            self.logger.debug(f"  🕘 `{chunk.filename}` file removed.")
+        else:
+            # == There was a problem ==
+            self.logger.error(
+                "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
 
 
     def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str,
