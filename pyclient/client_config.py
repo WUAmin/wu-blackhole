@@ -22,14 +22,13 @@ class ClientConfig:
         self.Database: WBHDatabase = None
         self.BlackHoles: list = []
         self.TelegramBot: WBHTelegramBot = None
-        self.config_dirpath = user_config_dir("wublackhole")
-        self.config_filepath = os.path.join(self.config_dirpath, 'client_config.json')
+        self.config_filepath = os.path.join("config", "client_config.json")
         self.tempdir = tempfile.mkdtemp('.wbhclient')
         self.password: str = None
 
         # initial config values
         self.client: dict = {
-            "db_filepath": os.path.join(self.config_dirpath, "wbh.db"),
+            "db_filepath": os.path.join("config", "wbh_client.db"),
             "keep_db_backup": 4,
             "bot": {
                 "api": "",
