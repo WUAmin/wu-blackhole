@@ -10,7 +10,7 @@ from PySide2.QtWidgets import QDialog, QMessageBox
 
 from common.helper import ChecksumType, EncryptionType, chacha20poly1305_decrypt_data, get_checksum_sha256, \
     get_checksum_sha256_file, get_checksum_sha256_folder, sizeof_fmt
-from common.wbh_db import WBHDatabase
+from common.wbh_db import WBHDatabase, WBHDbItems, WBHDbChunks, WBHDbBlackHoles
 from pyclient.client_config import client
 from pyclient.input_password import InputPasswordDialog
 from pyclient.restore_backup_window import RestoreBackupDialog
@@ -27,11 +27,9 @@ class ExplorerTableProxyModel(QSortFilterProxyModel):
         QSortFilterProxyModel.__init__(self, *args, **kwargs)
         self.filters = {}
 
-
     def setFilterByColumn(self, regex, column):
         self.filters[column] = regex
         self.invalidateFilter()
-
 
     def filterAcceptsRow(self, source_row, source_parent):
         for key, regex in self.filters.items():
@@ -49,7 +47,6 @@ class ExplorerTableModel(QAbstractTableModel):
         super(ExplorerTableModel, self).__init__()
         self._data = data
         self.header = header
-
 
     def data(self, index, role):
         value = self._data[index.row()][index.column()]
@@ -75,11 +72,9 @@ class ExplorerTableModel(QAbstractTableModel):
             # return self._data[index.row()][index.column()]
             return value
 
-
     def rowCount(self, index):
         # The length of the outer list.
         return len(self._data)
-
 
     def columnCount(self, index):
         # The following takes the first sub-list, and returns
@@ -87,7 +82,6 @@ class ExplorerTableModel(QAbstractTableModel):
         if len(self._data) <= 0:
             return 0
         return len(self._data[0])
-
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -138,17 +132,12 @@ class ClientMainWindow(QObject):
         # Check if there is any Database
         self.check_database_avalibility()
 
-
-
-
-
     def reload_settings_tab(self):
         self.api_le.setText(client.client['bot']['api'])
         self.db_path_le.setText(client.client['db_filepath'])
         self.keep_db_sp.setValue(client.client['keep_db_backup'])
         self.client_log_level_cb.setCurrentIndex((client.client['log']['client_level'] / 10) - 1)
         self.bot_log_level_cb.setCurrentIndex((client.client['log']['bot_level'] / 10) - 1)
-
 
     def check_database_avalibility(self):
         if client.Database:
@@ -166,7 +155,6 @@ class ClientMainWindow(QObject):
             # Switch to settings Tab
             self.tab_widget.setCurrentIndex(1)
 
-
     def explorer_load_blackholes(self):
         self.explorer_table.setProperty('blackhole_id', None)
         self.explorer_data = []
@@ -176,7 +164,7 @@ class ClientMainWindow(QObject):
 
         if client.Database:
             blackholes = client.Database.get_blackholes()
-            bh: WBHDatabase.WBHDbBlackHoles
+            bh: WBHDbBlackHoles
             for bh in blackholes:
                 self.explorer_data.append(['__BH', bh.name, sizeof_fmt(bh.size), bh.id])
             self.explorer_model = ExplorerTableModel(data=self.explorer_data,
@@ -188,13 +176,12 @@ class ClientMainWindow(QObject):
                 self.explorer_table.resizeColumnToContents(ih)
             self.addressbar_add(name="ROOT", db_id=-2, blackhole_id=None)
 
-
     def explorer_load_folder(self, blackhole_id, item_id):
         self.explorer_table.setProperty('blackhole_id', blackhole_id)
         self.explorer_data = []
         if client.Database:
             items = client.Database.get_items_by_parent_id(blackhole_id=blackhole_id, items_parent=item_id)
-            itm: WBHDatabase.WBHDbItems
+            itm: WBHDbItems
             for itm in items:
                 if itm.is_dir:
                     self.explorer_data.append(['__DIR', itm.filename, sizeof_fmt(itm.size), itm.id])
@@ -210,13 +197,11 @@ class ClientMainWindow(QObject):
             for ih in range(len(self.explorer_model.header)):
                 self.explorer_table.resizeColumnToContents(ih)
 
-
     def addressbar_clear(self):
         for button in self.button_group.buttons():
             self.button_group.removeButton(button)
             self.address_bar_hl.removeWidget(button)
             button.close()
-
 
     def addressbar_add(self, name, db_id, blackhole_id):
         btn = QtWidgets.QPushButton(text=name, parent=self.tab_explorer)
@@ -229,13 +214,11 @@ class ClientMainWindow(QObject):
         # insert widget before the last one (last one is space expander)
         self.address_bar_hl.insertWidget(self.address_bar_hl.count() - 1, btn)
 
-
     def on_explorer_table_current_changed(self, current: QModelIndex, previous: QModelIndex):
         if current.siblingAtColumn(0).data(100) == "__BH":
             self.download_pb.setDisabled(True)
         else:
             self.download_pb.setDisabled(False)
-
 
     def on_explorer_table_doublecliked(self, clickedIndex: QModelIndex):
         if clickedIndex.siblingAtColumn(0).data(100) == "__BH" or clickedIndex.siblingAtColumn(0).data(100) == "__DIR":
@@ -255,7 +238,6 @@ class ClientMainWindow(QObject):
                 self.addressbar_add(name=clickedIndex.siblingAtColumn(1).data(), db_id=item_id,
                                     blackhole_id=blackhole_id)
                 self.explorer_load_folder(blackhole_id=blackhole_id, item_id=item_id)
-
 
     def on_address_bar_clicked(self, btn_id):
         found = False
@@ -280,11 +262,9 @@ class ClientMainWindow(QObject):
             self.explorer_load_folder(blackhole_id=target_btn.property('blackhole_id'),
                                       item_id=target_btn.property('db_id'))
 
-
     def on_filter_le_text_changed(self, text: str):
         self.explorer_proxy_model.setFilterByColumn(QRegExp(text, Qt.CaseInsensitive, QRegExp.RegExp), 1)
         pass
-
 
     def on_download_pb_cliked(self):
         # Disable UI
@@ -318,7 +298,6 @@ class ClientMainWindow(QObject):
         self.dl_progress_folder.setVisible(False)
         self.filter_le.setVisible(True)
 
-
     def on_save_config_b_cliked(self):
         # Check api
         if len(self.api_le.text()) < 30:
@@ -336,6 +315,10 @@ class ClientMainWindow(QObject):
                 msg_box = QMessageBox()
                 msg_box.warning(self.window, 'Invalid Database Code', "Database code is too short to be valid.")
             else:
+                # Close database file to avoid file lock on windows
+                client.Database.Session.close_all()
+                client.Database.conn.close()
+                # Show dialog
                 rb_window = RestoreBackupDialog(self.db_code_te.toPlainText())
                 self.db_code_te.setPlainText("")
 
@@ -353,7 +336,6 @@ class ClientMainWindow(QObject):
                 # Check if there is any Database
                 self.check_database_avalibility()
 
-
     def on_reset_config_b_cliked(self):
         client.load()
         # Setup Database
@@ -363,7 +345,6 @@ class ClientMainWindow(QObject):
         # Load settings tab values from config
         self.reload_settings_tab()
 
-
     def dl_progress_update(self, wrote_size: int, total_size: int):
         percentage = int((wrote_size * 100) / total_size)
         self.dl_progress.setValue(percentage)
@@ -371,7 +352,6 @@ class ClientMainWindow(QObject):
             "{}/{}   {}%".format(sizeof_fmt(wrote_size, 1), sizeof_fmt(total_size, 1), percentage))
         self.dl_progress.repaint()
         QCoreApplication.processEvents()  # force process events because of GUI delay
-
 
     def dl_progress_folder_update(self, wrote_size: int, total_size: int):
         percentage = int((wrote_size * 100) / total_size)
@@ -381,15 +361,13 @@ class ClientMainWindow(QObject):
         self.dl_progress_folder.repaint()
         QCoreApplication.processEvents()  # force process events because of GUI delay
 
-
     def ask_for_rewrite(self, path) -> bool:
         return QMessageBox.question(self.window, "Rewrite ?", "Following path exist. "
-                                                       "Are you sure you want to rewrite on it?"
-                                                       "\n`{}`".format(path),
+                                                              "Are you sure you want to rewrite on it?"
+                                                              "\n`{}`".format(path),
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
-
-    def download_folder(self, item_id, blackhole_id, save_to, db_item: WBHDatabase.WBHDbItems = None,
+    def download_folder(self, item_id, blackhole_id, save_to, db_item: WBHDbItems = None,
                         ask_rewrite: bool = True):
         no_error = True
         try:
@@ -411,7 +389,7 @@ class ClientMainWindow(QObject):
                         ask_rewrite = False
             os.makedirs(new_dirpath, exist_ok=True)
             client.logger_client.debug("Create new folder: `{}`".format(new_dirpath))
-            itm: WBHDatabase.WBHDbItems
+            itm: WBHDbItems
             for itm in db_item.items:
                 if itm.is_dir:
                     no_error = no_error & self.download_folder(item_id=item_id, blackhole_id=blackhole_id,
@@ -449,8 +427,7 @@ class ClientMainWindow(QObject):
             msg_box.critical(self.window, 'Error', "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
         return False
 
-
-    def download_file(self, item_id, blackhole_id, save_to, db_item: WBHDatabase.WBHDbItems = None,
+    def download_file(self, item_id, blackhole_id, save_to, db_item: WBHDbItems = None,
                       ask_rewrite: bool = True, end_msg_box: bool = True):
         try:
             is_error = 0
@@ -469,7 +446,7 @@ class ClientMainWindow(QObject):
             self.dl_progress_update(0, db_item.size)
             # Open file to write
             with open(save_to, 'wb') as item_f:
-                chunk: WBHDatabase.WBHDbChunks
+                chunk: WBHDbChunks
                 for chunk in db_item.chunks:
                     # Download chunk
                     chunk_filepath = os.path.join(client.tempdir, chunk.filename)
