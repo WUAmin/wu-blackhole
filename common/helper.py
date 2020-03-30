@@ -44,6 +44,10 @@ def create_random_content_file(path: str, size: int):
                 size_remained -= size_remained
 
 
+def json_value_escape_string(raw_str: str):
+    return raw_str.replace('\\', '\\\\').replace('"', '\"')
+
+
 def get_checksum_sha256(chunk: bytes, running_hash=None):
     if running_hash is None:
         running_hash = hashlib.sha256()
