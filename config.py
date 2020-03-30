@@ -89,7 +89,8 @@ class Config:
             with open(self.config_filepath, 'w') as f:
                 json.dump({
                     "version": self.version,
-                    "core": self.core
+                    "blackholes" : [b.to_dict() for b in self.BlackHoles],
+                    "core": self.core,
                 }, f, sort_keys=False, indent=2, ensure_ascii=False)
         except Exception as e:
             self.logger_core.error("  ❌ ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
