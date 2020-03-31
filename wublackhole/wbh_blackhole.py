@@ -48,16 +48,16 @@ class WBHBlackHole:
                             encryption_pass=_dict['encryption_pass'])
 
 
-    def save(self):
-        """ return true if saved successfully to disk"""
-        bh_config_path = os.path.join(self.dirpath, config.core['blackhole_config_filename'])
-        config.logger_core.debug("🕐 Saving BlackHole config to `{}`".format(bh_config_path))
-        try:
-            with open(bh_config_path, 'w') as f:
-                json.dump(self.to_dict(), f, sort_keys=False)
-        except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not save BlackHole to `{}`:\n {}".format(bh_config_path, str(e)))
-        config.logger_core.debug("  ✅ BlackHole saved with {} items")
+    # def save(self):
+    #     """ return true if saved successfully to disk"""
+    #     bh_config_path = os.path.join(self.dirpath, config.core['blackhole_config_filename'])
+    #     config.logger_core.debug("🕐 Saving BlackHole config to `{}`".format(bh_config_path))
+    #     try:
+    #         with open(bh_config_path, 'w') as f:
+    #             json.dump(self.to_dict(), f, sort_keys=False)
+    #     except Exception as e:
+    #         config.logger_core.error("  ❌ ERROR: Can not save BlackHole to `{}`:\n {}".format(bh_config_path, str(e)))
+    #     config.logger_core.debug("  ✅ BlackHole saved with {} items")
 
 
     @staticmethod

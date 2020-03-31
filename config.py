@@ -11,14 +11,13 @@ class Config:
 
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
-        self.version: list = [1, 2, 1]  # TODO: Check version difference between config.json and config.py, major/minor
+        self.version: list = [1, 3, 0]  # TODO: Check version difference between config.json and config.py, major/minor
 
         # Load from config.json
         self.core: dict = {
             "temp_dir": os.path.join(tempfile.gettempdir(), "WBH-temp"),
             "db_filepath": "config/wbh.db",
             "backup_pass": os.urandom(16).hex(),
-            "blackhole_config_filename": ".__WBH__.json",
             "blackhole_queue_dirname": ".WBH_QUEUE",
             "bot": {
                 "api": "",

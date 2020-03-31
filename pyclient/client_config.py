@@ -17,7 +17,7 @@ class ClientConfig:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [1, 2, 0]
+        self.version: list = [1, 3, 0]
 
         # Variables to keep on runtime
         self.Database: WBHDatabase = None

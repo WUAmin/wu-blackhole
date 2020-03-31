@@ -12,12 +12,16 @@ from wublackhole.wbh_item import QueueState, WBHItem
 
 def get_contents(path: str, parents: list = [], parent_qid=None, populate_info: bool = False) -> tuple:
     """ Return (list of WatchPathItem, TotalChildren) Recursively"""
+    # Prepare a list of file/folders to ignore
+    ignore_list = [config.core['blackhole_queue_dirname']]
+    if os.path.abspath(os.path.join(path, *parents)) == os.path.abspath(os.path.split(config.core['temp_dir'])[0]):
+        ignore_list.append(os.path.split(config.core['temp_dir'])[1])
     items = []
     total = 0
     entities = os.listdir(os.path.join(path, *parents))
     for entity in entities:
-        # Ignore WBH_QUEUE_DIR_NAME and WBH_ConfigFilename
-        if entity == config.core['blackhole_queue_dirname'] or entity == config.core['blackhole_config_filename']:
+        # Ignore WBH_QUEUE_DIR_NAME
+        if entity in ignore_list:
             continue
         p = os.path.join(path, *parents, entity)
         if os.path.isdir(p):
@@ -140,13 +144,18 @@ def move_to_queue(bh, item_wpi: WBHItem):
 
 
 def start_watch(bh):
+    # Prepare a list of file/folders to ignore
+    ignore_list = [config.core['blackhole_queue_dirname']]
+    if os.path.abspath(bh.dirpath) == os.path.abspath(os.path.split(config.core['temp_dir'])[0]):
+        ignore_list.append(os.path.split(config.core['temp_dir'])[1])
+
     items = []
     while True:
         start_t = time.process_time()
         fns = os.listdir(bh.dirpath)
         for f in fns:
-            # Ignore WBH_QUEUE_DIR_NAME and WBH_ConfigFilename
-            if f == config.core['blackhole_queue_dirname'] or f == config.core['blackhole_config_filename']:
+            # Ignore WBH_QUEUE_DIR_NAME
+            if f in ignore_list:
                 continue
 
             # Prepare full_path
@@ -158,15 +167,15 @@ def start_watch(bh):
             # Update item's state
             if state == QueueState.UNCHANGED:
                 items[i].state = state
-                config.logger_core.debug("  D UNCHANGED {: 10d}  > {}".format(items[i].size, items[i].filename))
+                config.logger_core.debug("  UNCHANGED {: 10d}  > {}".format(items[i].size, items[i].filename))
             elif state == QueueState.NEW:
                 items.append(WBHItem(size=size, root_path=bh.dirpath, full_path=full_path, filename=f,
                                      is_dir=os.path.isdir(full_path)))
-                config.logger_core.debug("  D NEW       {: 10d}  > {}".format(size, f))
+                config.logger_core.debug("  NEW       {: 10d}  > {}".format(size, f))
             else:
                 items[i].state = state
                 items[i].size = size
-                config.logger_core.debug("  D CHANGING  {: 10d}  > {}".format(items[i].size, items[i].filename))
+                config.logger_core.debug("  CHANGING  {: 10d}  > {}".format(items[i].size, items[i].filename))
 
         elapsed_t = time.process_time() - start_t
         config.logger_core.debug(" Checked {} items in {:02f} secs: {}".format(len(items), elapsed_t, bh.dirpath))
