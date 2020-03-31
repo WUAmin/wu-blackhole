@@ -147,37 +147,37 @@ os.remove(decrypted_test_filepath)
 print("\n\n")
 
 # ==== pycrypto - AES ====
-from Crypto.Cipher import AES  # pip3 install pycrypto
-from Crypto.Hash import SHA256
-from Crypto import Random
-
-
-encrypted_test_filepath = test_filename + ".AES"
-decrypted_test_filepath = test_filename + ".AES.decrypt"
-
-hasher = SHA256.new(password_provided.encode('utf-8'))
-aes_key = hasher.digest()
-start_t = time.process_time()
-
-chunksize = 64 * 1024
-filesize = str(os.path.getsize(test_filename)).zfill(16)
-IV = Random.new().read(16)
-encryptor = AES.new(aes_key, AES.MODE_CBC, IV)
-with open(test_filename, 'rb') as infile:
-    with open(encrypted_test_filepath, 'wb') as outfile:
-        outfile.write(filesize.encode('utf-8'))
-        outfile.write(IV)
-
-        while True:
-            chunk = infile.read(chunksize)
-            if len(chunk) == 0:
-                break
-            elif len(chunk) % 16 != 0:
-                chunk += b' ' * (16 - (len(chunk) % 16))
-            outfile.write(encryptor.encrypt(chunk))
-elapsed_t = time.process_time() - start_t
-print("Encrypt - AES:     {:06f} secs...".format(elapsed_t))
-os.remove(encrypted_test_filepath)
-# os.remove(decrypted_test_filepath)
+# from Crypto.Cipher import AES  # pip3 install pycrypto
+# from Crypto.Hash import SHA256
+# from Crypto import Random
+#
+#
+# encrypted_test_filepath = test_filename + ".AES"
+# decrypted_test_filepath = test_filename + ".AES.decrypt"
+#
+# hasher = SHA256.new(password_provided.encode('utf-8'))
+# aes_key = hasher.digest()
+# start_t = time.process_time()
+#
+# chunksize = 64 * 1024
+# filesize = str(os.path.getsize(test_filename)).zfill(16)
+# IV = Random.new().read(16)
+# encryptor = AES.new(aes_key, AES.MODE_CBC, IV)
+# with open(test_filename, 'rb') as infile:
+#     with open(encrypted_test_filepath, 'wb') as outfile:
+#         outfile.write(filesize.encode('utf-8'))
+#         outfile.write(IV)
+#
+#         while True:
+#             chunk = infile.read(chunksize)
+#             if len(chunk) == 0:
+#                 break
+#             elif len(chunk) % 16 != 0:
+#                 chunk += b' ' * (16 - (len(chunk) % 16))
+#             outfile.write(encryptor.encrypt(chunk))
+# elapsed_t = time.process_time() - start_t
+# print("Encrypt - AES:     {:06f} secs...".format(elapsed_t))
+# os.remove(encrypted_test_filepath)
+# # os.remove(decrypted_test_filepath)
 
 os.remove(test_filepath)
