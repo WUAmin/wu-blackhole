@@ -66,7 +66,7 @@ class Config:
         # Update log config
         # create logger with 'blackhole_core'
         console = logging.StreamHandler()
-        if len(self.core['log']['filepath']) > 0 or os.path.exists(os.path.dirname(self.core['log']['filepath'])):
+        if len(self.core['log']['filepath']) > 0 and os.path.exists(os.path.dirname(self.core['log']['filepath'])):
             file_handler = logging.FileHandler(self.core['log']['filepath'], "wt")
             # noinspection PyArgumentList
             logging.basicConfig(level=self.core['log']['core_level'],
