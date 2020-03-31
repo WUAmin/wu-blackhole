@@ -15,7 +15,7 @@ from pyclient.client_config import client
 
 
 class RestoreBackupDialog(QObject):
-    def __init__(self, db_code: str, *args, **kwargs):
+    def __init__(self, db_code: str, no_gui=False, password: str = "", *args, **kwargs):
         super(RestoreBackupDialog, self).__init__(*args, **kwargs)
         # Load the .ui file
         ui_file = QFile("pyclient/restore_backup_window.ui")
@@ -33,8 +33,12 @@ class RestoreBackupDialog(QObject):
         self.restore_pb.clicked.connect(self.restore_pb_clicked)
         self.cancel_pb.clicked.connect(self.cancel_pb_clicked)
 
-        # Show Window
-        self.window.exec_()
+        if len(password) > 0:  # set password
+            self.password_le.setText(password)
+
+        if not no_gui:  # Do not show window
+            # Show Window
+            self.window.exec_()
 
 
     def log_info(self, txt: str, color=None):
@@ -154,8 +158,10 @@ class RestoreBackupDialog(QObject):
                 shutil.move(new_db_filepath, client.client['db_filepath'])
                 time.sleep(1)
                 self.window.done(QDialog.DialogCode.Accepted)
+                return True
             else:
                 self.log_info("Failed to restore db file completely.", "red")
 
         except Exception as e:
             self.log_info("Error! Can not restore. check database code and password again.\n{}".format(str(e)), "red")
+        return False

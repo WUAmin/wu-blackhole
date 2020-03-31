@@ -27,9 +27,11 @@ class ExplorerTableProxyModel(QSortFilterProxyModel):
         QSortFilterProxyModel.__init__(self, *args, **kwargs)
         self.filters = {}
 
+
     def setFilterByColumn(self, regex, column):
         self.filters[column] = regex
         self.invalidateFilter()
+
 
     def filterAcceptsRow(self, source_row, source_parent):
         for key, regex in self.filters.items():
@@ -47,6 +49,7 @@ class ExplorerTableModel(QAbstractTableModel):
         super(ExplorerTableModel, self).__init__()
         self._data = data
         self.header = header
+
 
     def data(self, index, role):
         value = self._data[index.row()][index.column()]
@@ -72,9 +75,11 @@ class ExplorerTableModel(QAbstractTableModel):
             # return self._data[index.row()][index.column()]
             return value
 
+
     def rowCount(self, index):
         # The length of the outer list.
         return len(self._data)
+
 
     def columnCount(self, index):
         # The following takes the first sub-list, and returns
@@ -82,6 +87,7 @@ class ExplorerTableModel(QAbstractTableModel):
         if len(self._data) <= 0:
             return 0
         return len(self._data[0])
+
 
     def headerData(self, col, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -132,12 +138,14 @@ class ClientMainWindow(QObject):
         # Check if there is any Database
         self.check_database_avalibility()
 
+
     def reload_settings_tab(self):
         self.api_le.setText(client.client['bot']['api'])
         self.db_path_le.setText(client.client['db_filepath'])
         self.keep_db_sp.setValue(client.client['keep_db_backup'])
         self.client_log_level_cb.setCurrentIndex((client.client['log']['client_level'] / 10) - 1)
         self.bot_log_level_cb.setCurrentIndex((client.client['log']['bot_level'] / 10) - 1)
+
 
     def check_database_avalibility(self):
         if client.Database:
@@ -154,6 +162,7 @@ class ClientMainWindow(QObject):
             self.tab_explorer.setDisabled(True)
             # Switch to settings Tab
             self.tab_widget.setCurrentIndex(1)
+
 
     def explorer_load_blackholes(self):
         self.explorer_table.setProperty('blackhole_id', None)
@@ -176,6 +185,7 @@ class ClientMainWindow(QObject):
                 self.explorer_table.resizeColumnToContents(ih)
             self.addressbar_add(name="ROOT", db_id=-2, blackhole_id=None)
 
+
     def explorer_load_folder(self, blackhole_id, item_id):
         self.explorer_table.setProperty('blackhole_id', blackhole_id)
         self.explorer_data = []
@@ -197,11 +207,13 @@ class ClientMainWindow(QObject):
             for ih in range(len(self.explorer_model.header)):
                 self.explorer_table.resizeColumnToContents(ih)
 
+
     def addressbar_clear(self):
         for button in self.button_group.buttons():
             self.button_group.removeButton(button)
             self.address_bar_hl.removeWidget(button)
             button.close()
+
 
     def addressbar_add(self, name, db_id, blackhole_id):
         btn = QtWidgets.QPushButton(text=name, parent=self.tab_explorer)
@@ -214,11 +226,13 @@ class ClientMainWindow(QObject):
         # insert widget before the last one (last one is space expander)
         self.address_bar_hl.insertWidget(self.address_bar_hl.count() - 1, btn)
 
+
     def on_explorer_table_current_changed(self, current: QModelIndex, previous: QModelIndex):
         if current.siblingAtColumn(0).data(100) == "__BH":
             self.download_pb.setDisabled(True)
         else:
             self.download_pb.setDisabled(False)
+
 
     def on_explorer_table_doublecliked(self, clickedIndex: QModelIndex):
         if clickedIndex.siblingAtColumn(0).data(100) == "__BH" or clickedIndex.siblingAtColumn(0).data(100) == "__DIR":
@@ -238,6 +252,7 @@ class ClientMainWindow(QObject):
                 self.addressbar_add(name=clickedIndex.siblingAtColumn(1).data(), db_id=item_id,
                                     blackhole_id=blackhole_id)
                 self.explorer_load_folder(blackhole_id=blackhole_id, item_id=item_id)
+
 
     def on_address_bar_clicked(self, btn_id):
         found = False
@@ -262,9 +277,11 @@ class ClientMainWindow(QObject):
             self.explorer_load_folder(blackhole_id=target_btn.property('blackhole_id'),
                                       item_id=target_btn.property('db_id'))
 
+
     def on_filter_le_text_changed(self, text: str):
         self.explorer_proxy_model.setFilterByColumn(QRegExp(text, Qt.CaseInsensitive, QRegExp.RegExp), 1)
         pass
+
 
     def on_download_pb_cliked(self):
         # Disable UI
@@ -297,6 +314,7 @@ class ClientMainWindow(QObject):
         self.dl_progress.setVisible(False)
         self.dl_progress_folder.setVisible(False)
         self.filter_le.setVisible(True)
+
 
     def on_save_config_b_cliked(self):
         # Check api
@@ -336,6 +354,7 @@ class ClientMainWindow(QObject):
                 # Check if there is any Database
                 self.check_database_avalibility()
 
+
     def on_reset_config_b_cliked(self):
         client.load()
         # Setup Database
@@ -345,6 +364,7 @@ class ClientMainWindow(QObject):
         # Load settings tab values from config
         self.reload_settings_tab()
 
+
     def dl_progress_update(self, wrote_size: int, total_size: int):
         percentage = int((wrote_size * 100) / total_size)
         self.dl_progress.setValue(percentage)
@@ -352,6 +372,7 @@ class ClientMainWindow(QObject):
             "{}/{}   {}%".format(sizeof_fmt(wrote_size, 1), sizeof_fmt(total_size, 1), percentage))
         self.dl_progress.repaint()
         QCoreApplication.processEvents()  # force process events because of GUI delay
+
 
     def dl_progress_folder_update(self, wrote_size: int, total_size: int):
         percentage = int((wrote_size * 100) / total_size)
@@ -361,14 +382,16 @@ class ClientMainWindow(QObject):
         self.dl_progress_folder.repaint()
         QCoreApplication.processEvents()  # force process events because of GUI delay
 
+
     def ask_for_rewrite(self, path) -> bool:
         return QMessageBox.question(self.window, "Rewrite ?", "Following path exist. "
                                                               "Are you sure you want to rewrite on it?"
                                                               "\n`{}`".format(path),
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
+
     def download_folder(self, item_id, blackhole_id, save_to, db_item: WBHDbItems = None,
-                        ask_rewrite: bool = True):
+                        ask_rewrite: bool = True, use_msg_box: bool = True):
         no_error = True
         try:
             # Get item from Database if did not presented
@@ -381,7 +404,7 @@ class ClientMainWindow(QObject):
             # prepare new folder path
             new_dirpath = os.path.join(save_to, db_item.filename)
             # check if exist and ask for rewrite
-            if ask_rewrite:
+            if ask_rewrite and use_msg_box:
                 if os.path.exists(new_dirpath):
                     if self.ask_for_rewrite(new_dirpath) == QMessageBox.No:
                         return
@@ -399,7 +422,7 @@ class ClientMainWindow(QObject):
                     new_filepath = os.path.join(new_dirpath, itm.filename)
                     no_error = no_error & self.download_file(item_id=item_id, blackhole_id=blackhole_id,
                                                              save_to=new_filepath, db_item=itm,
-                                                             ask_rewrite=ask_rewrite, end_msg_box=False)
+                                                             ask_rewrite=ask_rewrite, use_msg_box=False)
                     self.dl_progress_folder.setProperty('wrote_size',
                                                         self.dl_progress_folder.property('wrote_size') + itm.size)
                 self.dl_progress_folder_update(self.dl_progress_folder.property('wrote_size'),
@@ -414,26 +437,30 @@ class ClientMainWindow(QObject):
                                                    .format(ChecksumType(db_item.checksum_type).name,
                                                            db_item.filename))
                         # Folder Downloaded Correctly
-                        msg_box = QMessageBox()
-                        msg_box.information(self.window, 'Download',
-                                            "Folder successfully downloaded:\n`{}`".format(new_dirpath))
+                        if use_msg_box:
+                            msg_box = QMessageBox()
+                            msg_box.information(self.window, 'Download',
+                                                "Folder successfully downloaded:\n`{}`".format(new_dirpath))
                         return no_error
                     else:
                         raise Exception("Mismatch checksum for `{}`".format(db_item.filename))
             return no_error
         except Exception as e:
             client.logger_client.error("Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
-            msg_box = QMessageBox()
-            msg_box.critical(self.window, 'Error', "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
+            if use_msg_box:
+                msg_box = QMessageBox()
+                msg_box.critical(self.window, 'Error',
+                                 "Can not download folder by id `{}`\n\n{}".format(item_id, str(e)))
         return False
 
+
     def download_file(self, item_id, blackhole_id, save_to, db_item: WBHDbItems = None,
-                      ask_rewrite: bool = True, end_msg_box: bool = True):
+                      ask_rewrite: bool = True, use_msg_box: bool = True):
         try:
             is_error = 0
             wrote_size = 0
             # check if exist and ask for rewrite
-            if ask_rewrite:
+            if ask_rewrite and use_msg_box:
                 if os.path.exists(save_to):
                     if self.ask_for_rewrite(save_to) == QMessageBox.No:
                         return
@@ -510,7 +537,7 @@ class ClientMainWindow(QObject):
                                                        .format(ChecksumType(db_item.checksum_type).name,
                                                                db_item.filename))
                             # File Downloaded Correctly
-                            if end_msg_box:
+                            if use_msg_box:
                                 msg_box = QMessageBox()
                                 msg_box.information(self.window, 'Download',
                                                     "File successfully downloaded:\n`{}`".format(save_to))
@@ -520,10 +547,12 @@ class ClientMainWindow(QObject):
         except cryptography.exceptions.InvalidTag:
             client.logger_client.error("Incorrect password.")
             client.password = None
-            msg_box = QMessageBox()
-            msg_box.critical(self.window, 'Error', "Password is incorrect.")
+            if use_msg_box:
+                msg_box = QMessageBox()
+                msg_box.critical(self.window, 'Error', "Password is incorrect.")
         except Exception as e:
             client.logger_client.error("Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
-            msg_box = QMessageBox()
-            msg_box.critical(self.window, 'Error', "Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
+            if use_msg_box:
+                msg_box = QMessageBox()
+                msg_box.critical(self.window, 'Error', "Can not download file by id `{}`\n\n{}".format(item_id, str(e)))
         return False
