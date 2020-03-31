@@ -151,7 +151,7 @@ class WBHDatabase:
             self.logger.debug("Blackhole `{}` size recalculated: {}".format(bh.name, sizeof_fmt(bh.size)))
         except Exception as e:
             self.logger.error(
-                "  ❌ ERROR: could not recalculate blackhole by id of {}:\n {}".format(bh_id, str(e)))
+                "  ERROR: could not recalculate blackhole by id of {}:\n {}".format(bh_id, str(e)))
 
 
     def add_item_folder(self, item: WBHItem, blackhole_id, parent_item):
@@ -164,14 +164,14 @@ class WBHDatabase:
                 self.add_item(item, blackhole_id, parent_item)
         except Exception as e:
             self.logger.error(
-                "  ❌ ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
+                "  ERROR: Can not add folder `{}` to database:\n {}".format(item.full_path, str(e)))
 
 
     def add_item(self, item_wbhi: WBHItem, blackhole_id, parent_id):
         """ return id of item in database if successful, None on error"""
         new_item = None
         try:
-            self.logger.debug("🕐 Adding item `{}` to Database".format(item_wbhi.filename))
+            self.logger.debug("Adding item `{}` to Database".format(item_wbhi.filename))
             session = self.Session()
             new_item = WBHDbItems(filename=item_wbhi.filename,
                                        is_dir=item_wbhi.is_dir,
@@ -194,12 +194,12 @@ class WBHDatabase:
             # Add/Commit item to database
             session.add(new_item)
             session.commit()
-            self.logger.debug("✅ Item `{}` added to Database.".format(item_wbhi.filename))
+            self.logger.debug("Item `{}` added to Database.".format(item_wbhi.filename))
             # TODO: Replace it with adding this item size to blackhole size it.
             self.recalculate_blackhole_size(bh_id=blackhole_id)
         except Exception as e:
             self.logger.error(
-                "  ❌ ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
+                "  ERROR: Can not add item `{}` to database:\n {}".format(item_wbhi.full_path, str(e)))
         return new_item.id if new_item else None
 
 
@@ -222,7 +222,7 @@ class WBHDatabase:
 
     def get_item_by_id(self, blackhole_id, item_id) -> WBHDbItems:
         try:
-            self.logger.debug("🕐 Get item by id `{}` from database".format(item_id))
+            self.logger.debug("Get item by id `{}` from database".format(item_id))
             session = self.Session()
             # get item from database
             return session.query(WBHDbItems) \
@@ -231,13 +231,13 @@ class WBHDatabase:
                 .options(lazyload(WBHDbItems.items)) \
                 .first()
         except Exception as e:
-            self.logger.error("  ❌ ERROR: Can not get item by id `{}` from database:\n {}"
+            self.logger.error("  ERROR: Can not get item by id `{}` from database:\n {}"
                               .format(item_id, str(e)))
 
 
     def update_item_chunk_count(self, item_wbhi: WBHItem, chunk_count):
         try:
-            self.logger.debug("🕐 Update chunk_count for item `{}` in database".format(item_wbhi.filename))
+            self.logger.debug("Update chunk_count for item `{}` in database".format(item_wbhi.filename))
             session = self.Session()
 
             # Add/Commit item to database
@@ -249,9 +249,9 @@ class WBHDatabase:
             item_db.chunks_count = chunk_count
             session.commit()
             self.logger.debug(
-                "✅ chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
+                "chunk_count for Item `{}` updated in Database to {}.".format(item_wbhi.filename, chunk_count))
         except Exception as e:
-            self.logger.error("  ❌ ERROR: Can not update chunk_count for item `{}` on database:\n {}"
+            self.logger.error("  ERROR: Can not update chunk_count for item `{}` on database:\n {}"
                               .format(item_wbhi.full_path, str(e)))
 
 
@@ -259,7 +259,7 @@ class WBHDatabase:
         """ return id of chunk in database if successful, None on error"""
         new_chunk = None
         try:
-            self.logger.debug("🕐 Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
+            self.logger.debug("Adding chunk#{} of `{}` to Database".format(chunk.index, chunk.org_filename))
             session = self.Session()
             new_chunk = WBHDbChunks(msg_id=chunk.msg_id,
                                          file_id=chunk.file_id,
@@ -275,23 +275,23 @@ class WBHDatabase:
             # Add/Commit chunk to database
             session.add(new_chunk)
             session.commit()
-            self.logger.debug("✅ chunk#{} of `{}` added to Database.".format(chunk.index, chunk.org_filename))
+            self.logger.debug("chunk#{} of `{}` added to Database.".format(chunk.index, chunk.org_filename))
         except Exception as e:
             self.logger.error(
-                "  ❌ ERROR: Can not add  chunk#{} of `{}` to database:\n {}".format(chunk.index, chunk.org_filename, str(e)))
+                "  ERROR: Can not add  chunk#{} of `{}` to database:\n {}".format(chunk.index, chunk.org_filename, str(e)))
         return new_chunk.id if new_chunk else None
 
 
     def get_chunks_by_item_id(self, blackhole_id, item_id):
         try:
-            self.logger.debug("🕐 Get chunks for item id `{}` from database".format(item_id))
+            self.logger.debug("Get chunks for item id `{}` from database".format(item_id))
             session = self.Session()
             # get chunks from database
             return session.query(WBHDbChunks) \
                 .filter_by(blackhole_id=blackhole_id, items_id=item_id) \
                 .all()
         except Exception as e:
-            self.logger.error("  ❌ ERROR: Can not get chunks for item id `{}` on database:\n {}"
+            self.logger.error("  ERROR: Can not get chunks for item id `{}` on database:\n {}"
                               .format(item_id, str(e)))
 
 
