@@ -135,5 +135,7 @@ class ClientConfig:
         else:
             self.TelegramBot = None
 
+    def __del__(self):
+        shutil.rmtree(self.tempdir, ignore_errors=True)
 
 client: ClientConfig = ClientConfig()
