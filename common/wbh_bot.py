@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import datetime
+import time
 
 import telegram  # pip install python-telegram-bot --upgrade
 from telegram.ext import Updater
@@ -92,7 +93,8 @@ class WBHTelegramBot:
 
 
     def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str,
-                  encryption_type: EncryptionType = EncryptionType.NONE, encryption_secret: str = None) -> bool:
+                  encryption_type: EncryptionType = EncryptionType.NONE, encryption_secret: str = None,
+                  delay_between_chunks=0) -> bool:
         """ return True if all chunks sent successfully """
         is_all_successful = True
         if item_wbhi.chunks is None:
@@ -151,6 +153,9 @@ class WBHTelegramBot:
                             self.send_chunk_file(chunk=chunk, blackhole=blackhole)
                             # Add to chunks list
                             item_wbhi.chunks.append(chunk)
+                            if delay_between_chunks > 0:
+                                self.logger.debug(f"Rest for {delay_between_chunks} secs...")
+                                time.sleep(delay_between_chunks)
                         except Exception as e:
                             is_all_successful = False
                             self.logger.error(

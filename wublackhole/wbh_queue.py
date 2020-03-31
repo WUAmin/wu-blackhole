@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 from datetime import datetime
+import time
 
 from common.helper import ChecksumType, EncryptionType, chacha20poly1305_encrypt_data, compress_bytes_to_string_b64zlib, \
     get_checksum_sha256_file, get_checksum_sha256_folder
@@ -203,6 +204,7 @@ class WBHQueue:
                         # Remove top level item with DELETED state, that means all chunks are sent
                         self.remove(item)
                         config.logger_core.debug("`{}` removed from queue.".format(item.filename))
+                        config.logger_core.info("`{}` has been sent to blackhole.".format(item.filename))
                         # Save Queue to disk
                         self.save()
                 except Exception as e:
@@ -234,7 +236,8 @@ class WBHQueue:
                                                         chunk_size=config.core['chunk_size'],
                                                         temp_dir=config.core['temp_dir'],
                                                         encryption_type=self.blackhole.encryption_type,
-                                                        encryption_secret=self.blackhole.encryption_pass):
+                                                        encryption_secret=self.blackhole.encryption_pass,
+                                                        delay_between_chunks=config.core['path_check_interval']):
                             config.logger_core.debug("Sent `{}` to BlackHole.".format(item.filename))
                             # Update item state and db_id
                             item.state = QueueState.DONE
@@ -258,6 +261,8 @@ class WBHQueue:
                                 config.TelegramBot.send_chunk_file(chunk=chunk, blackhole=self.blackhole)
                                 # Save Queue to disk
                                 self.save()
+                                self.logger.debug(f"Rest for {config.core['path_check_interval']} secs...")
+                                time.sleep(config.core['path_check_interval'])
                         if all_chunks_done:  # If all there is no chunk with UPLOADING state
                             # Add all chunks to Database
                             chunk: WBHChunk
@@ -270,6 +275,7 @@ class WBHQueue:
                             os.remove(item.full_path)
                             item.state = QueueState.DELETED
                             config.logger_core.debug("`{}` removed from disk.".format(item.filename))
+                            config.logger_core.info("`{}` has been sent to blackhole.".format(item.filename))
                             # Save Queue to disk
                             self.save()
                             # Update chunks_count
@@ -287,6 +293,7 @@ class WBHQueue:
         # Backup Database to blackhole
         if len(items) == 0 and config.need_backup:
             config.need_backup = WBHQueue.backup_database(blackhole=self.blackhole) is None
+            config.logger_core.info("Queue is empty. Backup database is done.")
 
         return everything_is_done
 
