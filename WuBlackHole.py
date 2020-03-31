@@ -23,9 +23,9 @@ def setup_app():
 
     # Check/Create BlackHole Temp Directory
     if not os.path.exists(config.core['temp_dir']):
-        config.logger_core.warning(f"⚠️ TempDir `{config.core['temp_dir']}` does not exist.")
+        config.logger_core.warning(f" TempDir `{config.core['temp_dir']}` does not exist.")
         os.makedirs(config.core['temp_dir'])
-        config.logger_core.info(f"✅ Created TempDir at `{config.core['temp_dir']}`")
+        config.logger_core.info(f" Created TempDir at `{config.core['temp_dir']}`")
 
     # BlackHole Paths's QueueDir
     bh: WBHBlackHole
@@ -33,9 +33,9 @@ def setup_app():
         queue_dir = os.path.join(bh.dirpath, config.core['blackhole_queue_dirname'])
         # Check/Create BlackHole Path
         if not os.path.exists(queue_dir):
-            config.logger_core.warning(f"⚠️ Queue directory `{queue_dir}` does not exist.")
+            config.logger_core.warning(f" Queue directory `{queue_dir}` does not exist.")
             os.makedirs(queue_dir)
-            config.logger_core.info(f"✅ Created queue directory at `{queue_dir}`")
+            config.logger_core.info(f"Created queue directory at `{queue_dir}`")
 
     # Initialize Bot
     config.TelegramBot = WBHTelegramBot(api=config.core['bot']['api'],
@@ -54,10 +54,10 @@ def setup_app():
                     os.remove(os.path.join(config.core['temp_dir'], file))
                     t_i += 1
                 except:
-                    config.logger_core.error("❌ Error while deleting file : ",
+                    config.logger_core.error("Error while deleting file : ",
                                              os.path.join(config.core['temp_dir'], file))
     if t_i > 0:
-        config.logger_core.debug(f"⚠️ {t_i} old temp files deleted.")
+        config.logger_core.debug(f" {t_i} old temp files deleted.")
 
 
 def main():

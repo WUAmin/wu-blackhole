@@ -59,7 +59,7 @@ def print_contents(contents: list, parents: list = [], line_pre_txt=''):
     item: WBHItem
     for item in contents:
         if item.is_dir:
-            msg = f"{line_pre_txt}{depth_space}📂 {os.path.join(*parents, item.filename)}"
+            msg = f"{line_pre_txt}{depth_space}D {os.path.join(*parents, item.filename)}"
             msg += ", Size: {}".format(sizeof_fmt(item.size))
             if hasattr(item, 'items_count'):
                 msg += ", Items: {}".format(item.items_count)
@@ -80,7 +80,6 @@ def print_contents(contents: list, parents: list = [], line_pre_txt=''):
             print(msg)
 
 
-
 def get_new_item_state(items: list, filename, size) -> tuple:
     """ Return tuple(WatchCheckSizeState, index as int)  """
     item: WBHItem  # Annotate item type before the loop
@@ -97,10 +96,10 @@ def get_new_item_state(items: list, filename, size) -> tuple:
 
 def move_to_queue(bh, item_wpi: WBHItem):
     """ return true on success """
-    config.logger_core.debug(f"  🕐 Moving `{item_wpi.filename}` to queue directory...")
+    config.logger_core.debug(f"  Moving `{item_wpi.filename}` to queue directory...")
     if bh.queue.is_item_exist(item_wpi):
         config.logger_core.warning(
-            f"    ⚠ IGNORE moving `{item_wpi.filename}` to queue directory, Item exist is queue !!!")
+            f"    IGNORE moving `{item_wpi.filename}` to queue directory, Item exist is queue !!!")
     else:
         try:
             start_t = time.process_time()
@@ -134,10 +133,10 @@ def move_to_queue(bh, item_wpi: WBHItem):
             bh.queue.save()
             elapsed_t = time.process_time() - start_t
             config.logger_core.info(
-                "  ✅ `{}` () moved to queue directory in {:02f} secs...".format(item_wpi.filename, elapsed_t))
+                "  `{}` () moved to queue directory in {:02f} secs...".format(item_wpi.filename, elapsed_t))
         except shutil.Error as e:
             # raise OSError(str(e))
-            config.logger_core.error(f"  ❌ ERROR: Can not move `{item_wpi.filename}` to queue directory:\n {str(e)}")
+            config.logger_core.error(f"  ERROR: Can not move `{item_wpi.filename}` to queue directory:\n {str(e)}")
 
 
 def start_watch(bh):
@@ -159,18 +158,18 @@ def start_watch(bh):
             # Update item's state
             if state == QueueState.UNCHANGED:
                 items[i].state = state
-                config.logger_core.debug("  📂 UNCHANGED {: 10d}  > {}".format(items[i].size, items[i].filename))
+                config.logger_core.debug("  D UNCHANGED {: 10d}  > {}".format(items[i].size, items[i].filename))
             elif state == QueueState.NEW:
                 items.append(WBHItem(size=size, root_path=bh.dirpath, full_path=full_path, filename=f,
                                      is_dir=os.path.isdir(full_path)))
-                config.logger_core.debug("  📂 NEW       {: 10d}  > {}".format(size, f))
+                config.logger_core.debug("  D NEW       {: 10d}  > {}".format(size, f))
             else:
                 items[i].state = state
                 items[i].size = size
-                config.logger_core.debug("  📂 CHANGING  {: 10d}  > {}".format(items[i].size, items[i].filename))
+                config.logger_core.debug("  D CHANGING  {: 10d}  > {}".format(items[i].size, items[i].filename))
 
         elapsed_t = time.process_time() - start_t
-        config.logger_core.debug("ℹ️ Checked {} items in {:02f} secs: {}".format(len(items), elapsed_t, bh.dirpath))
+        config.logger_core.debug(" Checked {} items in {:02f} secs: {}".format(len(items), elapsed_t, bh.dirpath))
 
         # Moving UNCHANGED items to BlackHole's queue and save queue
         item: WBHItem
@@ -187,7 +186,7 @@ def start_watch(bh):
         #     if run_counts <= 0:
         #         break
         # else:
-        config.logger_core.debug(f"⌛ Sleep for {config.core['path_check_interval']} seconds...")
+        config.logger_core.debug(f"Sleep for {config.core['path_check_interval']} seconds...")
         time.sleep(config.core['path_check_interval'])
 
         # Break the loop if there is items there. Let application process blackholes

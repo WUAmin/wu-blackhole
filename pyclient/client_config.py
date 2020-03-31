@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import tempfile
 
 from appdirs import user_config_dir
@@ -85,7 +86,7 @@ class ClientConfig:
 
     def save(self):
         """ return true if saved config successfully to disk"""
-        self.logger_client.debug("🕐 Saving config to `{}`".format(self.config_filepath))
+        self.logger_client.debug("Saving config to `{}`".format(self.config_filepath))
         try:
             with open(self.config_filepath, 'w') as f:
                 json.dump({
@@ -94,9 +95,9 @@ class ClientConfig:
                 }, f, sort_keys=False, indent=2, ensure_ascii=False)
         except Exception as e:
             self.logger_client.error(
-                "  ❌ ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
+                "  ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        self.logger_client.debug("  ✅ config `{}` saved.".format(self.config_filepath))
+        self.logger_client.debug("  config `{}` saved.".format(self.config_filepath))
         return True
 
 
@@ -111,9 +112,9 @@ class ClientConfig:
                 self.init_config()
         except Exception as e:
             self.logger_client.error(
-                "  ❌ ERROR: Can not load config from `{}`:\n {}".format(self.config_filepath, str(e)))
+                "  ERROR: Can not load config from `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        self.logger_client.debug("  ✅ config `{}` loaded.".format(self.config_filepath))
+        self.logger_client.debug("  config `{}` loaded.".format(self.config_filepath))
         return True
 
 

@@ -19,6 +19,7 @@ class WBHQueue:
         if os.path.exists(self.queue_file):
             self.load()
 
+
     def is_item_exist_list(self, item: WBHItem, items: list) -> WBHItem:
         """ return true if item exist in given list, Recursively """
         if item in items:
@@ -31,9 +32,11 @@ class WBHQueue:
                         return True
         return False
 
+
     def is_item_exist(self, item: WBHItem) -> bool:
         """ return true if item exist in queue list, Recursively """
         return self.is_item_exist_list(item, self.items)
+
 
     def get_item_by_qid_list(self, qid: int, items: list) -> WBHItem:
         """ return WBHItem if item exist with qid in given list, Recursively """
@@ -47,14 +50,17 @@ class WBHQueue:
                     return sub_item
         return None
 
+
     def get_item_by_qid(self, qid: int) -> WBHItem:
         """ return WBHItem if item exist with qid in queue list, Recursively """
         return self.get_item_by_qid_list(qid, self.items)
+
 
     def add(self, item: WBHItem):
         """ return true if added item successfully"""
         item.state = QueueState.INQUEUE
         self.items.append(item)
+
 
     def _remove_recursively(self, item: WBHItem, items: list):
         """ return true if removed item successfully"""
@@ -70,31 +76,35 @@ class WBHQueue:
                     return True
         return False
 
+
     def remove(self, item: WBHItem):
         """ return true if removed item successfully (Recursive)"""
         return self._remove_recursively(item, self.items)
 
+
     def save(self):
         """ return true if saved queue successfully to disk"""
-        config.logger_core.debug("🕐 Saving queue to `{}`".format(self.queue_file))
+        config.logger_core.debug("Saving queue to `{}`".format(self.queue_file))
         try:
             with open(self.queue_file, 'w') as f:
                 json.dump([o.to_dict() for o in self.items], f, sort_keys=False)
         except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not save queue to `{}`:\n {}".format(self.queue_file, str(e)))
-        config.logger_core.debug("  ✅ Queue saved with {} items".format(len(self.items)))
+            config.logger_core.error("  ERROR: Can not save queue to `{}`:\n {}".format(self.queue_file, str(e)))
+        config.logger_core.debug("  Queue saved with {} items".format(len(self.items)))
+
 
     def load(self):
         """ return true if loaded queue successfully from disk"""
-        config.logger_core.debug("🕐 Loading queue from `{}`".format(self.queue_file))
+        config.logger_core.debug("Loading queue from `{}`".format(self.queue_file))
         try:
             with open(self.queue_file, 'r') as f:
                 data_j = json.load(f)
                 for itm in data_j:
                     self.items.append(WBHItem.from_dict(itm))
         except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not load queue from `{}`:\n {}".format(self.queue_file, str(e)))
-        config.logger_core.debug("  ✅ Queue loaded with {} items".format(len(self.items)))
+            config.logger_core.error("  ERROR: Can not load queue from `{}`:\n {}".format(self.queue_file, str(e)))
+        config.logger_core.debug("  Queue loaded with {} items".format(len(self.items)))
+
 
     @staticmethod
     def backup_database(blackhole):
@@ -175,7 +185,7 @@ class WBHQueue:
                             self.save()
                     # else:
                     #     config.logger_core.debug(
-                    #         "☑️ `{}` state is {}. Ignore item itself. Checking Children...".format(item.filename,
+                    #         " `{}` state is {}. Ignore item itself. Checking Children...".format(item.filename,
                     #                                                                                item.state.name))
                     if item.state == QueueState.DONE:
                         # Check children
@@ -184,7 +194,7 @@ class WBHQueue:
                                 # All children of a root item are in DONE state
                                 # Remove folder
                                 shutil.rmtree(item.full_path, ignore_errors=True)
-                                config.logger_core.debug("✅ `{}` removed from disk.".format(item.filename))
+                                config.logger_core.debug("`{}` removed from disk.".format(item.filename))
                                 item.state = QueueState.DELETED
                                 # Save Queue to disk
                                 self.save()
@@ -192,11 +202,11 @@ class WBHQueue:
                     if item.state == QueueState.DELETED and parent is None:
                         # Remove top level item with DELETED state, that means all chunks are sent
                         self.remove(item)
-                        config.logger_core.debug("✅ `{}` removed from queue.".format(item.filename))
+                        config.logger_core.debug("`{}` removed from queue.".format(item.filename))
                         # Save Queue to disk
                         self.save()
                 except Exception as e:
-                    config.logger_core.error("❌ ERROR: Could add item `{}` to BlackHole: {}"
+                    config.logger_core.error("ERROR: Could add item `{}` to BlackHole: {}"
                                              .format(item.filename, str(e)))
             else:
                 # == File ==
@@ -214,7 +224,7 @@ class WBHQueue:
                         # Save Queue to disk
                         self.save()
                     except Exception as e:
-                        config.logger_core.error("❌ ERROR: Could add item `{}` to Database: {}"
+                        config.logger_core.error("ERROR: Could add item `{}` to Database: {}"
                                                  .format(item.filename, str(e)))
                 if item.state == QueueState.UPLOADING:
                     try:
@@ -225,17 +235,17 @@ class WBHQueue:
                                                         temp_dir=config.core['temp_dir'],
                                                         encryption_type=self.blackhole.encryption_type,
                                                         encryption_secret=self.blackhole.encryption_pass):
-                            config.logger_core.debug("✅ Sent `{}` to BlackHole.".format(item.filename))
+                            config.logger_core.debug("Sent `{}` to BlackHole.".format(item.filename))
                             # Update item state and db_id
                             item.state = QueueState.DONE
                         else:
                             config.logger_core.error(
-                                "❌ ERROR: Could not send `{}` to BlackHole????".format(item.filename))
+                                "ERROR: Could not send `{}` to BlackHole????".format(item.filename))
                         # Save Queue to disk
                         self.save()
                     except Exception as e:
                         config.logger_core.error(
-                            "❌ ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
+                            "ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
                 if item.state == QueueState.DONE:
                     everything_is_done = False
                     try:
@@ -259,26 +269,27 @@ class WBHQueue:
                             # Remove file
                             os.remove(item.full_path)
                             item.state = QueueState.DELETED
-                            config.logger_core.debug("✅ `{}` removed from disk.".format(item.filename))
+                            config.logger_core.debug("`{}` removed from disk.".format(item.filename))
                             # Save Queue to disk
                             self.save()
                             # Update chunks_count
                             config.Database.update_item_chunk_count(item_wbhi=item, chunk_count=len(item.chunks))
                     except Exception as e:
                         config.logger_core.error(
-                            "❌ ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
+                            "ERROR: Could add item `{}` to BlackHole: ".format(item.filename, str(e)))
                 if item.state == QueueState.DELETED and parent is None:
                     # Remove top level item with DELETED state, that means all chunks are sent
                     self.remove(item)
-                    config.logger_core.debug("✅ `{}` removed from queue.".format(item.filename))
+                    config.logger_core.debug("`{}` removed from queue.".format(item.filename))
                     # Save Queue to disk
                     self.save()
 
         # Backup Database to blackhole
         if len(items) == 0 and config.need_backup:
-            config.need_backup = not self.backup_database()
+            config.need_backup = WBHQueue.backup_database(blackhole=self.blackhole) is None
 
         return everything_is_done
+
 
     def process_queue(self, telegram_id: str):
         """ Empty queue by sending items to BlackHole """

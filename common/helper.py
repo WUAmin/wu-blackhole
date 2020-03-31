@@ -77,7 +77,7 @@ def get_checksum_sha256_file(filepath: str, block_size: int = 16384, running_has
                 # running_hash.update(byte_block)
                 get_checksum_sha256(chunk=byte_block, running_hash=running_hash)
     except Exception as e:
-        logger.error(f"  ❌ ERROR: Can not calculate checksum for `{filepath}` :\n {str(e)}")
+        logger.error(f"  ERROR: Can not calculate checksum for `{filepath}` :\n {str(e)}")
         return None
     return running_hash.hexdigest()
 
@@ -98,12 +98,12 @@ def get_checksum_sha256_folder(dirpath: str, block_size: int = 16384, running_ha
     try:
         for root, dirs, files in os.walk(dirpath):
             for names in files:
-                logger.debug(" 🖩 Hashing `{}`".format(names))
+                logger.debug(" Hashing `{}`".format(names))
                 filepath = os.path.join(root, names)
                 get_checksum_sha256_file(filepath=filepath, block_size=block_size, running_hash=running_hash,
                                          logger=logger)
     except Exception as e:
-        logger.error(f"  ❌ ERROR: Can not calculate checksum for `{dirpath}` :\n {str(e)}")
+        logger.error(f"  ERROR: Can not calculate checksum for `{dirpath}` :\n {str(e)}")
         return None
     return running_hash.hexdigest()
 

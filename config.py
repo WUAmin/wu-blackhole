@@ -84,7 +84,7 @@ class Config:
 
     def save(self):
         """ return true if saved config successfully to disk"""
-        self.logger_core.debug("🕐 Saving config to `{}`".format(self.config_filepath))
+        self.logger_core.debug("Saving config to `{}`".format(self.config_filepath))
         try:
             with open(self.config_filepath, 'w') as f:
                 json.dump({
@@ -93,9 +93,9 @@ class Config:
                     "core": self.core,
                 }, f, sort_keys=False, indent=2, ensure_ascii=False)
         except Exception as e:
-            self.logger_core.error("  ❌ ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
+            self.logger_core.error("  ERROR: Can not save config to `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        self.logger_core.debug("  ✅ config `{}` saved.".format(self.config_filepath))
+        self.logger_core.debug("  config `{}` saved.".format(self.config_filepath))
         return True
 
 
@@ -115,9 +115,9 @@ class Config:
                 self.init_config()
         except Exception as e:
             self.logger_core.error(
-                "  ❌ ERROR: Can not load config from `{}`:\n {}".format(self.config_filepath, str(e)))
+                "  ERROR: Can not load config from `{}`:\n {}".format(self.config_filepath, str(e)))
             return False
-        self.logger_core.debug("  ✅ config `{}` loaded.".format(self.config_filepath))
+        self.logger_core.debug("  config `{}` loaded.".format(self.config_filepath))
         return True
 
 
