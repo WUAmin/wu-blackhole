@@ -51,25 +51,25 @@ class WBHBlackHole:
     # def save(self):
     #     """ return true if saved successfully to disk"""
     #     bh_config_path = os.path.join(self.dirpath, config.core['blackhole_config_filename'])
-    #     config.logger_core.debug("🕐 Saving BlackHole config to `{}`".format(bh_config_path))
+    #     config.logger_core.debug(" Saving BlackHole config to `{}`".format(bh_config_path))
     #     try:
     #         with open(bh_config_path, 'w') as f:
     #             json.dump(self.to_dict(), f, sort_keys=False)
     #     except Exception as e:
-    #         config.logger_core.error("  ❌ ERROR: Can not save BlackHole to `{}`:\n {}".format(bh_config_path, str(e)))
-    #     config.logger_core.debug("  ✅ BlackHole saved with {} items")
+    #         config.logger_core.error("   ERROR: Can not save BlackHole to `{}`:\n {}".format(bh_config_path, str(e)))
+    #     config.logger_core.debug("  BlackHole saved with {} items")
 
 
     @staticmethod
     def load(bh_config_path: str):
         """ return true if loaded successfully from disk. """
-        config.logger_core.debug("🕐 Loading BlackHole from `{}`".format(bh_config_path))
+        config.logger_core.debug(" Loading BlackHole from `{}`".format(bh_config_path))
         bh = None
         try:
             with open(bh_config_path, 'r') as f:
                 data_j = json.load(f)
                 bh = WBHBlackHole.from_dict(data_j)
         except Exception as e:
-            config.logger_core.error("  ❌ ERROR: Can not load BlackHole from `{}`:\n {}".format(bh_config_path, str(e)))
-        config.logger_core.debug("  ✅ BlackHole loaded with {} items")
+            config.logger_core.error("   ERROR: Can not load BlackHole from `{}`:\n {}".format(bh_config_path, str(e)))
+        config.logger_core.debug("  BlackHole loaded with {} items")
         return bh

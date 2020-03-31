@@ -64,7 +64,7 @@ class WBHTelegramBot:
                                                 timeout=40,
                                                 parse_mode=telegram.ParseMode.MARKDOWN)
         except Exception as e:
-            self.logger.error("❌ Error  _send_chunk : %s" % str(e))
+            self.logger.error("Error  _send_chunk : %s" % str(e))
         return res
 
 
@@ -79,16 +79,16 @@ class WBHTelegramBot:
             chunk.msg_id = res.message_id
             chunk.file_id = res.document.file_id
             chunk.state = QueueState.DONE
-            self.logger.debug(f"  ✅ `{chunk.filename}` file sent to BlackHole")
+            self.logger.debug(f"  `{chunk.filename}` file sent to BlackHole")
             # Save queue
             blackhole.queue.save()
             # Remove chunk file
             os.remove(chunk.org_fullpath)
-            self.logger.debug(f"  🕘 `{chunk.filename}` file removed.")
+            self.logger.debug(f"  `{chunk.filename}` file removed.")
         else:
             # == There was a problem ==
             self.logger.error(
-                "  ❌ ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
+                "  ERROR: failed to send chunk#{} `{}` to BlackHole. res".format(chunk.index, chunk.filename))
 
 
     def send_file(self, item_wbhi: WBHItem, blackhole: WBHBlackHole, chunk_size: int, temp_dir: str,
@@ -101,7 +101,7 @@ class WBHTelegramBot:
         # Prepare original filename
         org_fullpath = os.path.join(*item_wbhi.parents, item_wbhi.filename)
         chunk_i = len(item_wbhi.chunks)
-        self.logger.debug("🕑 Sending file `{}` in chunks of {}"
+        self.logger.debug("Sending file `{}` in chunks of {}"
                           .format(org_fullpath, sizeof_fmt(chunk_size)))
         try:
             # Open Original File
@@ -118,7 +118,7 @@ class WBHTelegramBot:
                         encryption_data = None
                         if encryption_type == EncryptionType.ChaCha20Poly1305:
                             # Encrypt chunk data
-                            self.logger.debug("🕑 Encrypting chunk using ChaCha20Poly1305 ...")
+                            self.logger.debug("Encrypting chunk using ChaCha20Poly1305 ...")
                             chunk_bytes, key, nonce = chacha20poly1305_encrypt_data(data=chunk_bytes,
                                                                                     secret=encryption_secret.encode())
                             encryption_data = '{}O{}'.format(key.hex(), nonce.hex())
@@ -138,15 +138,15 @@ class WBHTelegramBot:
                                          encryption_data=encryption_data,
                                          parent_qid=item_wbhi.parent_qid,
                                          parent_db_id=item_wbhi.db_id)
-                        self.logger.debug("  🕑 Read {}".format(sizeof_fmt(chunk.size)))
+                        self.logger.debug("  Read {}".format(sizeof_fmt(chunk.size)))
                         try:
                             # Open chunk file to write
                             with open(chunk.org_fullpath, 'wb') as chunk_file_w:
                                 # write to chunk file
                                 chunk_file_w.write(chunk_bytes)
-                                self.logger.debug("  🕒 Wrote {} to `{}` file"
+                                self.logger.debug("  Wrote {} to `{}` file"
                                                   .format(sizeof_fmt(len(chunk_bytes)), chunk.filename))
-                            self.logger.debug(f"  🕕 Sending `{chunk.filename}` file to BlackHole")
+                            self.logger.debug(f"  Sending `{chunk.filename}` file to BlackHole")
                             # Send chunk file to blackhole
                             self.send_chunk_file(chunk=chunk, blackhole=blackhole)
                             # Add to chunks list
@@ -154,13 +154,13 @@ class WBHTelegramBot:
                         except Exception as e:
                             is_all_successful = False
                             self.logger.error(
-                                f"  ❌ ERROR: Could not send chunk#{chunk_i} `{chunk_filename}` to BlackHole: {str(e)}")
+                                f"  ERROR: Could not send chunk#{chunk_i} `{chunk_filename}` to BlackHole: {str(e)}")
                     else:
                         break
                     chunk_i += 1
         except Exception as e:
             is_all_successful = False
-            self.logger.error(f"  ❌ ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
+            self.logger.error(f"  ERROR: Could not send `{item_wbhi.full_path}` to BlackHole: {str(e)}")
         return is_all_successful
 
 
@@ -179,6 +179,6 @@ class WBHTelegramBot:
         try:
             return self.get_file_by_id(chunk.file_id, path_to_save)
         except Exception as e:
-            self.logger.error("  ❌ ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
+            self.logger.error("  ERROR: Could not download chunk#{} by name of `{}` from BlackHole: {}"
                               .format(chunk.index, chunk.filename, str(e)))
         return None

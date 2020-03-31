@@ -103,7 +103,7 @@ class ClientConfig:
 
     def load(self):
         """ return true if loaded config successfully from disk"""
-        # self.logger_client.debug("🕐 Loading config from `{}`".format(self.config_filepath))
+        # self.logger_client.debug(" Loading config from `{}`".format(self.config_filepath))
         try:
             with open(self.config_filepath, 'r') as f:
                 data_j = json.load(f)
