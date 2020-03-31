@@ -4,7 +4,10 @@ tests/benchmark_encryptions.*
 # App Data
 config/*.db
 config/config.json
-tests/test-config.json
+config/client_config.json
+config/wbh_client.db
+config/wbh_client.db.backup-*
+
 
 # Environments
 .env
@@ -148,5 +151,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/config/config.json
-config.py
+
