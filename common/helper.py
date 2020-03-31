@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+from pathlib import Path
 import zlib
 from base64 import b64decode, b64encode
 from enum import Enum
@@ -46,6 +47,14 @@ def create_random_content_file(path: str, size: int):
 
 def json_value_escape_string(raw_str: str):
     return raw_str.replace('\\', '\\\\').replace('"', '\"')
+
+
+def get_path_size(full_path: str):
+    """ return total size of file or directory in bytes """
+    if os.path.isdir(full_path):
+        return sum(f.stat().st_size for f in Path(full_path).glob('**/*') if f.is_file())
+    else:
+        return os.stat(full_path).st_size
 
 
 def get_checksum_sha256(chunk: bytes, running_hash=None):

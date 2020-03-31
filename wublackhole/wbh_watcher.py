@@ -5,7 +5,7 @@ import shutil
 import time
 from pathlib import Path
 
-from common.helper import sizeof_fmt
+from common.helper import sizeof_fmt, get_path_size
 from config import config
 from wublackhole.wbh_item import QueueState, WBHItem
 
@@ -93,14 +93,6 @@ def get_new_item_state(items: list, filename, size) -> tuple:
                 return QueueState.CHANGED, i
         i += 1
     return QueueState.NEW, -1
-
-
-def get_path_size(full_path: str):
-    """ return total size of file or directory in bytes """
-    if os.path.isdir(full_path):
-        return sum(f.stat().st_size for f in Path(full_path).glob('**/*') if f.is_file())
-    else:
-        return os.stat(full_path).st_size
 
 
 def move_to_queue(bh, item_wpi: WBHItem):
