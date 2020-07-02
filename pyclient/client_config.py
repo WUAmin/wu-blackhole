@@ -17,7 +17,7 @@ class ClientConfig:
     def __init__(self):
         # Versioning: [Major, Minor, Patch]
         # Change on Minor version might need config manual config check...
-        self.version: list = [1, 3, 0]
+        self.version: list = [1, 4, 0]
 
         # Variables to keep on runtime
         self.Database: WBHDatabase = None
@@ -31,6 +31,7 @@ class ClientConfig:
         self.client: dict = {
             "db_filepath": os.path.join("config", "wbh_client.db"),
             "keep_db_backup": 4,
+            "max_download_retry": 3,
             "bot": {
                 "api": "",
                 "proxy": None,
@@ -109,6 +110,11 @@ class ClientConfig:
                 data_j = json.load(f)
                 self.version = data_j['version']
                 self.client = data_j['client']
+
+                # Older config compatibility
+                if "max_download_retry" not in self.client:
+                    self.client["max_download_retry"] = 3
+
                 self.init_config()
         except Exception as e:
             self.logger_client.error(

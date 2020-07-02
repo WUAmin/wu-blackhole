@@ -145,7 +145,7 @@ def move_to_queue(bh, item_wpi: WBHItem):
 
 def start_watch(bh):
     # Prepare a list of file/folders to ignore
-    ignore_list = [config.core['blackhole_queue_dirname']]
+    ignore_list = [config.core['blackhole_queue_dirname'], "desktop.ini"]
     if os.path.abspath(bh.dirpath) == os.path.abspath(os.path.split(config.core['temp_dir'])[0]):
         ignore_list.append(os.path.split(config.core['temp_dir'])[1])
 

@@ -58,8 +58,12 @@ class RestoreBackupDialog(QObject):
         try:
             secret_b = self.password_le.text().encode()
             bd_data = decompress_bytes_to_string_b64zlib(self.db_code)
+            # print(len(bd_data))
+            # print(bd_data)
             key = bd_data[:32]
+            # print(key)
             nonce = bd_data[32:44]
+            # print(nonce)
             encrypted_data = bd_data[44:]
             self.log_info("Decrypting code...")
             raw_db_backup_data = chacha20poly1305_decrypt_data(data=encrypted_data,

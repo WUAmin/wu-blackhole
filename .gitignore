@@ -6,7 +6,7 @@ config/*.db
 config/config.json
 config/client_config.json
 config/wbh_client.db
-config/wbh_client.db.backup-*
+config/wbh_client.db.*
 
 
 # Environments

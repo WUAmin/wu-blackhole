@@ -110,6 +110,7 @@ class ClientMainWindow(QObject):
         self.db_path_le = self.window.findChild(QtWidgets.QLineEdit, 'db_path_le')
         self.db_code_te = self.window.findChild(QtWidgets.QTextEdit, 'db_code_te')
         self.keep_db_sp = self.window.findChild(QtWidgets.QSpinBox, 'keep_db_sp')
+        self.max_dl_retry_sb = self.window.findChild(QtWidgets.QSpinBox, 'max_dl_retry_sb')
         self.client_log_level_cb = self.window.findChild(QtWidgets.QComboBox, 'client_log_level_cb')
         self.bot_log_level_cb = self.window.findChild(QtWidgets.QComboBox, 'bot_log_level_cb')
         save_config_b = self.window.findChild(QtWidgets.QPushButton, 'save_config_b')
@@ -143,6 +144,7 @@ class ClientMainWindow(QObject):
         self.api_le.setText(client.client['bot']['api'])
         self.db_path_le.setText(client.client['db_filepath'])
         self.keep_db_sp.setValue(client.client['keep_db_backup'])
+        self.max_dl_retry_sb.setValue(client.client['max_download_retry'])
         self.client_log_level_cb.setCurrentIndex((client.client['log']['client_level'] / 10) - 1)
         self.bot_log_level_cb.setCurrentIndex((client.client['log']['bot_level'] / 10) - 1)
 
@@ -342,6 +344,7 @@ class ClientMainWindow(QObject):
 
         client.client['bot']['api'] = self.api_le.text()
         client.client['keep_db_backup'] = self.keep_db_sp.value()
+        client.client['max_download_retry'] = self.max_dl_retry_sb.value()
         client.client['db_filepath'] = self.db_path_le.text()
         client.client['log']['client_level'] = (self.client_log_level_cb.currentIndex() + 1) * 10
         client.client['log']['bot_level'] = (self.bot_log_level_cb.currentIndex() + 1) * 10
@@ -477,53 +480,64 @@ class ClientMainWindow(QObject):
                 for chunk in db_item.chunks:
                     # Download chunk
                     chunk_filepath = os.path.join(client.tempdir, chunk.filename)
-                    if client.TelegramBot.get_chunk(chunk, chunk_filepath):
-                        with open(chunk_filepath, 'rb') as chunk_f:
-                            chunk_data = chunk_f.read()
-                            client.logger_client.debug(
-                                "Read {} from chunk#{}".format(sizeof_fmt(len(chunk_data)), chunk.index))
-                            if chunk.encryption == EncryptionType.ChaCha20Poly1305.value:
+                    download_retry = 0
+                    while True:
+                        if client.TelegramBot.get_chunk(chunk, chunk_filepath):
+                            with open(chunk_filepath, 'rb') as chunk_f:
+                                chunk_data = chunk_f.read()
                                 client.logger_client.debug(
-                                    "Decrypting {} ...".format(EncryptionType.ChaCha20Poly1305.name))
-                                # Extract key and nonce from encryption_data
-                                chunk_key_hex, chunk_nonce_hex = chunk.encryption_data.split('O')
-                                # ask for password if never asked
-                                if client.password is None:
-                                    ip_dialog = InputPasswordDialog(EncryptionType(chunk.encryption))
-                                    if ip_dialog.window.result() == QDialog.DialogCode.Rejected:
-                                        # User didn't entered password, CANCEL
-                                        client.logger_client.warning("Aborted by user.")
-                                        is_error = 2
-                                        break
+                                    "Read {} from chunk#{}".format(sizeof_fmt(len(chunk_data)), chunk.index))
+                                if chunk.encryption == EncryptionType.ChaCha20Poly1305.value:
+                                    client.logger_client.debug(
+                                        "Decrypting {} ...".format(EncryptionType.ChaCha20Poly1305.name))
+                                    # Extract key and nonce from encryption_data
+                                    chunk_key_hex, chunk_nonce_hex = chunk.encryption_data.split('O')
+                                    # ask for password if never asked
+                                    if client.password is None:
+                                        ip_dialog = InputPasswordDialog(EncryptionType(chunk.encryption))
+                                        if ip_dialog.window.result() == QDialog.DialogCode.Rejected:
+                                            # User didn't entered password, CANCEL
+                                            client.logger_client.warning("Aborted by user.")
+                                            is_error = 2
+                                            break
+                                        else:
+                                            client.password = ip_dialog.encryption_pass
+                                        QCoreApplication.processEvents()  # force process events because of GUI delay
+                                    # Decrypt chunk
+                                    chunk_data = chacha20poly1305_decrypt_data(data=chunk_data,
+                                                                               secret=client.password.encode(),
+                                                                               key=bytes.fromhex(chunk_key_hex),
+                                                                               nonce=bytes.fromhex(chunk_nonce_hex))
+                                # Matching Checksums
+                                if chunk.checksum_type == ChecksumType.NONE.value:
+                                    client.logger_client.debug("There is no checksum for chunk#{}".format(chunk.index))
+                                if chunk.checksum_type == ChecksumType.SHA256.value:
+                                    chunk_checksum = get_checksum_sha256(chunk_data)
+                                    if chunk_checksum == chunk.checksum:
+                                        client.logger_client.debug("{} checksum for chunk#{} matched."
+                                                                   .format(ChecksumType(chunk.checksum_type).name,
+                                                                           chunk.index))
                                     else:
-                                        client.password = ip_dialog.encryption_pass
-                                    QCoreApplication.processEvents()  # force process events because of GUI delay
-                                # Decrypt chunk
-                                chunk_data = chacha20poly1305_decrypt_data(data=chunk_data,
-                                                                           secret=client.password.encode(),
-                                                                           key=bytes.fromhex(chunk_key_hex),
-                                                                           nonce=bytes.fromhex(chunk_nonce_hex))
-                            # Matching Checksums
-                            if chunk.checksum_type == ChecksumType.NONE.value:
-                                client.logger_client.debug("There is no checksum for chunk#{}".format(chunk.index))
-                            if chunk.checksum_type == ChecksumType.SHA256.value:
-                                chunk_checksum = get_checksum_sha256(chunk_data)
-                                if chunk_checksum == chunk.checksum:
-                                    client.logger_client.debug("{} checksum for chunk#{} matched."
-                                                               .format(ChecksumType(chunk.checksum_type).name,
-                                                                       chunk.index))
-                                else:
-                                    raise Exception("ERROR: {} checksum for chunk#{} mismatched.".format(
-                                        ChecksumType(chunk.checksum_type).name, chunk.index))
-                            # Write to file
-                            item_f.write(chunk_data)
-                            client.logger_client.debug("Wrote {} to file `{}`"
-                                                       .format(sizeof_fmt(len(chunk_data)), os.path.split(save_to)[1]))
-                            wrote_size += len(chunk_data)
-                            self.dl_progress_update(wrote_size, db_item.size)
-                    else:
-                        raise Exception("Could not download chunk#{} by name of `{}` from BlackHole"
-                                        .format(chunk.index, chunk.filename))
+                                        raise Exception("ERROR: {} checksum for chunk#{} mismatched.".format(
+                                            ChecksumType(chunk.checksum_type).name, chunk.index))
+                                # Write to file
+                                item_f.write(chunk_data)
+                                client.logger_client.debug("Wrote {} to file `{}`"
+                                                           .format(sizeof_fmt(len(chunk_data)), os.path.split(save_to)[1]))
+                                wrote_size += len(chunk_data)
+                                self.dl_progress_update(wrote_size, db_item.size)
+                                break
+                        elif download_retry < client.client['max_download_retry']:
+                            # Retry to download. Timeout happens a lot while downloading
+                            download_retry += 1
+                            client.logger_client.warning(
+                                "Retrying to download chunk#{} by name of `{}` from BlackHole ({}/{})..."
+                                    .format(chunk.index, chunk.filename, download_retry, client.client['max_download_retry']))
+                        else:
+                            raise Exception(
+                                "Could not download chunk#{} by name of `{}` from BlackHole after {} retries."
+                                    .format(chunk.index, chunk.filename, download_retry))
+
                     # Remove chunk file if exist
                     if os.path.exists(chunk_filepath):
                         os.remove(chunk_filepath)

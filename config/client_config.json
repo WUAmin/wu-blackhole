@@ -1,0 +1,30 @@
+{
+  "version": [
+    1,
+    0,
+    0
+  ],
+  "client": {
+    "db_filepath": "config\\wbh_client.db",
+    "keep_db_backup": 4,
+    "max_download_retry": 3,
+    "bot": {
+      "api": "675565419:AAE6Hsq5Co9ASyMZF3QhPT2mIXWGGNG3TdE",
+      "proxy": null,
+      "chat_ids": {
+        "admins": [
+          {
+            "id": -1,
+            "name": ""
+          }
+        ],
+        "mods": [],
+        "users": []
+      }
+    },
+    "log": {
+      "client_level": 10,
+      "bot_level": 20
+    }
+  }
+}
