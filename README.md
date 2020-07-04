@@ -1,7 +1,7 @@
 # wu-blackhole
 
-## Combining server and client in one GUI app...
-
+## Combining server and client in one GUI app:
+* Using [fman build system](https://github.com/mherrmann/fbs) for packaging and deployment.
 
 
 
