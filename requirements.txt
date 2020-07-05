@@ -3,3 +3,4 @@ SQLAlchemy
 PySide2
 fbs
 appdirs
+configparser
