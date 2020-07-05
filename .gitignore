@@ -7,7 +7,7 @@ config/config.json
 config/client_config.json
 config/wbh_client.db
 config/wbh_client.db.*
-
+*.ini
 
 # Environments
 .env
@@ -33,6 +33,7 @@ tg/
 __pycache__/
 *.py[cod]
 *$py.class
+target/
 
 # C extensions
 *.so

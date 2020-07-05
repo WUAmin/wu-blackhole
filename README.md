@@ -2,8 +2,9 @@
 
 ## Combining server and client in one GUI app:
 * Using [fman build system](https://github.com/mherrmann/fbs) for packaging and deployment.
-
-
+	- put this file in your "`c:\windows\system32`" from somewhere in your windows 10 installation or by installing [Windows 10 SDK
+](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk/) 
+	- You have to use Python 3.6.x for fman to work. (for now)
 
 
 
