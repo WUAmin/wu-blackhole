@@ -5,6 +5,8 @@ import shutil
 import sys
 import tempfile
 # from appdirs import user_config_dir
+from pathlib import Path
+
 from wbh_bot import WBHTelegramBot
 from wbh_db import WBHDatabase
 
@@ -29,7 +31,7 @@ class WBHSettings:
         # initial config values
         self.config['general'] = {
             "version": "2.0.0",  # Versioning: [Major, Minor, Patch]
-            "tempdir": str(tempfile.mkdtemp('.wbhclient')),
+            "tempdir": "",
             "log_level": "10",
             "db_filepath": os.path.join(app_dir, "wbh.db"),
             "keep_db_backup": "4",
@@ -55,7 +57,7 @@ class WBHSettings:
         self.logger_core = logging.getLogger('client')
         self.logger_bot = logging.getLogger('bot')
 
-        self.init_config()
+        # self.init_config()
 
         # Load config.json if exist
         # if os.path.exists(self.config_filepath):
@@ -64,6 +66,7 @@ class WBHSettings:
 
     def init_config(self):
         """ Generating some of config based on config.json """
+
         # Update log config
         # # create logger with 'blackhole_core'
         # console = logging.StreamHandler()
@@ -80,6 +83,19 @@ class WBHSettings:
         #                         handlers=[console])
         self.logger_core.setLevel(self.config['general'].getint('log_level'))
         self.logger_bot.setLevel(self.config['telegram'].getint('log_level'))
+
+        # Initial temp directory
+        if self.config['general']["tempdir"] == "":
+            # Create a random name temp directory on system's default temp location
+            self.config['general']["tempdir"] = str(tempfile.mkdtemp('.wbhclient'))
+            settings.logger_core.debug('Tempdir `{}` created.'.format(self.config['general']["tempdir"]))
+        else:
+            # Making sure specified temp dir exist
+            try:
+                Path(self.config['general']["tempdir"]).mkdir(parents=True, exist_ok=False)
+                settings.logger_core.debug('Tempdir `{}` created.'.format(self.config['general']["tempdir"]))
+            except FileExistsError:
+                settings.logger_core.debug('Tempdir `{}` exist.'.format(self.config['general']["tempdir"]))
 
         # # Database
         # print(self.config_dirpath)
@@ -142,8 +158,9 @@ class WBHSettings:
 
     def init_bot(self, api, proxy=None):
         if api:
-            self.TelegramBot = WBHTelegramBot(api=api, logger=self.logger_bot, proxy=proxy,
-                                              log_level=self.config['telegram']['log_level'])
+            self.TelegramBot = WBHTelegramBot(api=api, logger=self.logger_bot,
+                                              proxy=(proxy if len(proxy) > 0 else None),
+                                              log_level=self.config['telegram'].getint('log_level'))
         else:
             self.TelegramBot = None
 

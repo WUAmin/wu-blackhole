@@ -18,7 +18,7 @@ def setup_client():
     # Setup Database
     settings.init_database()
     # Setup Bot
-    # settings.init_bot(client.client['bot']['api'], client.client['bot']['proxy'])
+    settings.init_bot(settings.config['telegram']['api'], settings.config['telegram']['proxy'])
 
 
 def parse_args():

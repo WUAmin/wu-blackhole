@@ -396,7 +396,7 @@ class MainWindow(QObject):
         settings.config['general']['keep_db_backup'] = str(self.keep_db_sp.value())
         settings.config['general']['max_download_retry'] = str(self.max_dl_retry_sb.value())
         settings.config['general']['db_filepath'] = self.db_path_le.text()
-        settings.config['general']['temp_path_le'] = self.temp_path_le.text()
+        settings.config['general']['tempdir'] = self.temp_path_le.text()
         settings.config['general']['blackhole_queue_dirname'] = self.bh_queue_dirname_le.text()
         settings.config['general']['log_level'] = str((self.client_log_level_cb.currentIndex() + 1) * 10)
         settings.config['telegram']['log_level'] = str((self.bot_log_level_cb.currentIndex() + 1) * 10)
