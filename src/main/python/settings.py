@@ -35,11 +35,15 @@ class WBHSettings:
             "log_level": "10",
             "db_filepath": os.path.join(app_dir, "wbh.db"),
             "keep_db_backup": "4",
-            "max_download_retry": "3",
-            "blackhole_queue_dirname": ".WBH_QUEUE",
+            "max_download_retry": "3"
+        }
+        self.config['server'] = {
+            "blackhole_path": "",
             "backup_pass": os.urandom(16).hex(),
-            "chunk_size": 18874368,
-            "path_check_interval": 3,
+            "blackhole_queue_dirname": ".WBH_QUEUE",
+            "chunk_size": "18",
+            "path_check_interval": "6",
+            "upload_delay": "8",
         }
         self.config['telegram'] = {
             "api": "",

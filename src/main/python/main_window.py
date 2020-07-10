@@ -110,6 +110,12 @@ class MainWindow(QObject):
         self.resources_path = os.path.dirname(ui_path)
 
         # Find widgets and connect slots
+        self.bh_path_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_path_le')
+        self.backup_pass_le = self.window.findChild(QtWidgets.QLineEdit, 'backup_pass_le')
+        self.bh_queue_dirname_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_queue_dirname_le')
+        self.chunk_size_sb = self.window.findChild(QtWidgets.QSpinBox, 'chunk_size_sb')
+        self.path_check_interval_sb = self.window.findChild(QtWidgets.QSpinBox, 'path_check_interval_sb')
+        self.upload_delay_sb = self.window.findChild(QtWidgets.QSpinBox, 'upload_delay_sb')
         self.api_le = self.window.findChild(QtWidgets.QLineEdit, 'api_le')
         self.db_path_le = self.window.findChild(QtWidgets.QLineEdit, 'db_path_le')
         self.temp_path_le = self.window.findChild(QtWidgets.QLineEdit, 'temp_path_le')
@@ -147,10 +153,16 @@ class MainWindow(QObject):
 
 
     def reload_settings_tab(self):
+        self.bh_path_le.setText(settings.config['server']['blackhole_path'])
+        self.backup_pass_le.setText(settings.config['server']['backup_pass'])
+        self.bh_queue_dirname_le.setText(settings.config['server']['blackhole_queue_dirname'])
+        self.chunk_size_sb.setValue(settings.config['server'].getint('chunk_size'))
+        self.path_check_interval_sb.setValue(settings.config['server'].getint('path_check_interval'))
+        self.upload_delay_sb.setValue(settings.config['server'].getint('upload_delay'))
+
         self.api_le.setText(settings.config['telegram']['api'])
         self.db_path_le.setText(settings.config['general']['db_filepath'])
         self.temp_path_le.setText(settings.config['general']['tempdir'])
-        self.bh_queue_dirname_le.setText(settings.config['general']['blackhole_queue_dirname'])
         self.keep_db_sp.setValue(settings.config['general'].getint('keep_db_backup'))
         self.max_dl_retry_sb.setValue(settings.config['general'].getint('max_download_retry'))
         self.client_log_level_cb.setCurrentIndex((settings.config['general'].getint('log_level') / 10) - 1)
@@ -354,28 +366,40 @@ class MainWindow(QObject):
 
 
     def on_save_config_b_cliked(self):
-        # Check api
+        # Check BlackHole Path
+        if not os.path.exists(self.bh_path_le.text()):
+            msg_box = QMessageBox()
+            msg_box.critical(self.window, 'Invalid BlackHole Path', "You have to enter a valid/existing path.")
+            return
+
+        # Check Backup Password
+        if len(self.backup_pass_le.text()) < 6:
+            msg_box = QMessageBox()
+            msg_box.critical(self.window, 'Invalid Backup Password', "Backup password should be at least 6 characters.")
+            return
+
+        # Check API
         if len(self.api_le.text()) < 30:
             msg_box = QMessageBox()
-            msg_box.warning(self.window, 'No API', "You have to enter a valid Telegram bot api.")
+            msg_box.critical(self.window, 'No API', "You have to enter a valid Telegram bot api.")
             return
 
         # Check db_filepath
         if len(self.db_path_le.text()) < 2:
             msg_box = QMessageBox()
-            msg_box.warning(self.window, 'Invalid Database Path', "You have to enter a valid Database path.")
+            msg_box.critical(self.window, 'Invalid Database Path', "You have to enter a valid Database path.")
             return
 
         # Check bh_queue_dirname_le
         if len(self.bh_queue_dirname_le.text()) < 2:
             msg_box = QMessageBox()
-            msg_box.warning(self.window, 'Invalid Queue Dir Name', "You have to enter a valid Queue Dir Name.")
+            msg_box.critical(self.window, 'Invalid Queue Dir Name', "You have to enter a valid Queue Dir Name.")
             return
 
         # Check temp_path_le
         if len(self.temp_path_le.text()) < 2:
             msg_box = QMessageBox()
-            msg_box.warning(self.window, 'Invalid TempDir', "You have to enter a valid TempDir.")
+            msg_box.critical(self.window, 'Invalid TempDir', "You have to enter a valid TempDir.")
             return
 
         # Check database code
@@ -391,6 +415,13 @@ class MainWindow(QObject):
                 rb_window = RestoreBackupDialog(self.db_code_te.toPlainText(),
                                                 ui_path=os.path.join(self.resources_path, "restore_backup_window.ui"))
                 self.db_code_te.setPlainText("")
+
+        settings.config['server']['blackhole_path'] = self.bh_path_le.text()
+        settings.config['server']['backup_pass'] = self.backup_pass_le.text()
+        settings.config['server']['blackhole_queue_dirname'] = self.bh_queue_dirname_le.text()
+        settings.config['server']['chunk_size'] = str(self.chunk_size_sb.value())
+        settings.config['server']['path_check_interval'] = str(self.path_check_interval_sb.value())
+        settings.config['server']['upload_delay'] = str(self.upload_delay_sb.value())
 
         settings.config['telegram']['api'] = self.api_le.text()
         settings.config['general']['keep_db_backup'] = str(self.keep_db_sp.value())
