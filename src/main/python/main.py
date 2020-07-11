@@ -32,7 +32,7 @@ def parse_args():
         settings.config_filepath = os.path.abspath(args.config)
     else:
         # Default config file path
-        settings.config_filepath = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), "config.ini")
+        settings.config_filepath = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), "config.toml")
 
 
 if __name__ == '__main__':

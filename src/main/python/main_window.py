@@ -110,12 +110,20 @@ class MainWindow(QObject):
         self.resources_path = os.path.dirname(ui_path)
 
         # Find widgets and connect slots
-        self.bh_path_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_path_le')
+        # Server Widgets
         self.backup_pass_le = self.window.findChild(QtWidgets.QLineEdit, 'backup_pass_le')
         self.bh_queue_dirname_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_queue_dirname_le')
         self.chunk_size_sb = self.window.findChild(QtWidgets.QSpinBox, 'chunk_size_sb')
         self.path_check_interval_sb = self.window.findChild(QtWidgets.QSpinBox, 'path_check_interval_sb')
         self.upload_delay_sb = self.window.findChild(QtWidgets.QSpinBox, 'upload_delay_sb')
+        # Blackholes Widgets
+        self.bh_id_l = self.window.findChild(QtWidgets.QLabel, 'bh_id_l')
+        self.bh_path_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_path_le')
+        self.bh_name_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_name_le')
+        self.bh_tg_id_le = self.window.findChild(QtWidgets.QLineEdit, 'bh_tg_id_le')
+        self.encrypt_type_cb = self.window.findChild(QtWidgets.QComboBox, 'encrypt_type_cb')
+        self.encrypt_pass_le = self.window.findChild(QtWidgets.QLineEdit, 'encrypt_pass_le')
+        # Common Widgets
         self.api_le = self.window.findChild(QtWidgets.QLineEdit, 'api_le')
         self.db_path_le = self.window.findChild(QtWidgets.QLineEdit, 'db_path_le')
         self.temp_path_le = self.window.findChild(QtWidgets.QLineEdit, 'temp_path_le')
@@ -125,10 +133,12 @@ class MainWindow(QObject):
         self.max_dl_retry_sb = self.window.findChild(QtWidgets.QSpinBox, 'max_dl_retry_sb')
         self.client_log_level_cb = self.window.findChild(QtWidgets.QComboBox, 'client_log_level_cb')
         self.bot_log_level_cb = self.window.findChild(QtWidgets.QComboBox, 'bot_log_level_cb')
+        # Settings Buttons
         save_config_b = self.window.findChild(QtWidgets.QPushButton, 'save_config_b')
-        save_config_b.clicked.connect(self.on_save_config_b_cliked)
+        save_config_b.clicked.connect(self.on_save_config_b_clicked)
         reset_config_b = self.window.findChild(QtWidgets.QPushButton, 'reset_config_b')
         reset_config_b.clicked.connect(self.on_reset_config_b_cliked)
+        # Tabs
         self.tab_widget = self.window.findChild(QtWidgets.QTabWidget, 'tabWidget')
         self.tab_explorer = self.window.findChild(QtWidgets.QWidget, 'tab_explorer')
         self.explorer_table = self.window.findChild(QtWidgets.QTableView, 'explorer_table')
@@ -153,20 +163,27 @@ class MainWindow(QObject):
 
 
     def reload_settings_tab(self):
-        self.bh_path_le.setText(settings.config['server']['blackhole_path'])
         self.backup_pass_le.setText(settings.config['server']['backup_pass'])
         self.bh_queue_dirname_le.setText(settings.config['server']['blackhole_queue_dirname'])
-        self.chunk_size_sb.setValue(settings.config['server'].getint('chunk_size'))
-        self.path_check_interval_sb.setValue(settings.config['server'].getint('path_check_interval'))
-        self.upload_delay_sb.setValue(settings.config['server'].getint('upload_delay'))
+        self.chunk_size_sb.setValue(int(settings.config['server']['chunk_size']))
+        self.path_check_interval_sb.setValue(int(settings.config['server']['path_check_interval']))
+        self.upload_delay_sb.setValue(int(settings.config['server']['upload_delay']))
+
+        self.bh_id_l.setText(settings.config['blackhole'][0]['id'])
+        self.bh_path_le.setText(settings.config['blackhole'][0]['dirpath'])
+        self.bh_name_le.setText(settings.config['blackhole'][0]['name'])
+        self.bh_tg_id_le.setText(settings.config['blackhole'][0]['telegram_id'])
+        # self.encrypt_type_cb.setCurrentIndex((int(settings.config['blackhole'][0]['encryption_type'])) - 1)
+        self.encrypt_type_cb.setCurrentText(settings.config['blackhole'][0]['encryption_type'])
+        self.encrypt_pass_le.setText(settings.config['blackhole'][0]['encryption_pass'])
 
         self.api_le.setText(settings.config['telegram']['api'])
         self.db_path_le.setText(settings.config['general']['db_filepath'])
         self.temp_path_le.setText(settings.config['general']['tempdir'])
-        self.keep_db_sp.setValue(settings.config['general'].getint('keep_db_backup'))
-        self.max_dl_retry_sb.setValue(settings.config['general'].getint('max_download_retry'))
-        self.client_log_level_cb.setCurrentIndex((settings.config['general'].getint('log_level') / 10) - 1)
-        self.bot_log_level_cb.setCurrentIndex((settings.config['telegram'].getint('log_level') / 10) - 1)
+        self.keep_db_sp.setValue(int(settings.config['general']['keep_db_backup']))
+        self.max_dl_retry_sb.setValue(int(settings.config['general']['max_download_retry']))
+        self.client_log_level_cb.setCurrentIndex((int(settings.config['general']['log_level']) / 10) - 1)
+        self.bot_log_level_cb.setCurrentIndex((int(settings.config['telegram']['log_level']) / 10) - 1)
 
 
     def check_database_avalibility(self):
@@ -365,7 +382,7 @@ class MainWindow(QObject):
         self.filter_le.setVisible(True)
 
 
-    def on_save_config_b_cliked(self):
+    def on_save_config_b_clicked(self):
         # Check BlackHole Path
         if not os.path.exists(self.bh_path_le.text()):
             msg_box = QMessageBox()
@@ -416,12 +433,17 @@ class MainWindow(QObject):
                                                 ui_path=os.path.join(self.resources_path, "restore_backup_window.ui"))
                 self.db_code_te.setPlainText("")
 
-        settings.config['server']['blackhole_path'] = self.bh_path_le.text()
         settings.config['server']['backup_pass'] = self.backup_pass_le.text()
         settings.config['server']['blackhole_queue_dirname'] = self.bh_queue_dirname_le.text()
         settings.config['server']['chunk_size'] = str(self.chunk_size_sb.value())
         settings.config['server']['path_check_interval'] = str(self.path_check_interval_sb.value())
         settings.config['server']['upload_delay'] = str(self.upload_delay_sb.value())
+
+        settings.config['blackhole'][0]['dirpath'] = self.bh_path_le.text()
+        settings.config['blackhole'][0]['name'] = self.bh_name_le.text()
+        settings.config['blackhole'][0]['telegram_id'] = self.bh_tg_id_le.text()
+        settings.config['blackhole'][0]['encryption_type'] = self.client_log_level_cb.currentText()
+        settings.config['blackhole'][0]['encryption_pass'] = self.encrypt_pass_le.text()
 
         settings.config['telegram']['api'] = self.api_le.text()
         settings.config['general']['keep_db_backup'] = str(self.keep_db_sp.value())
@@ -446,7 +468,7 @@ class MainWindow(QObject):
         # # Setup Database
         # client.init_database()
         # # Setup Bot
-        # client.init_bot(settings.config['telegram'].getint('log_level'), client.client['bot']['proxy'])
+        # client.init_bot(settings.config['telegram']['log_level'], client.client['bot']['proxy'])
         # Load settings tab values from config
         self.reload_settings_tab()
 
@@ -611,13 +633,13 @@ class MainWindow(QObject):
         #                         wrote_size += len(chunk_data)
         #                         self.dl_progress_update(wrote_size, db_item.size)
         #                         break
-        #                 elif download_retry < settings.config['client'].getint('max_download_retry'):
+        #                 elif download_retry < settings.config['client']['max_download_retry']:
         #                     # Retry to download. Timeout happens a lot while downloading
         #                     download_retry += 1
         #                     client.logger_client.warning(
         #                         "Retrying to download chunk#{} by name of `{}` from BlackHole ({}/{})..."
         #                             .format(chunk.index, chunk.filename, download_retry,
-        #                                     settings.config['client'].getint('max_download_retry')))
+        #                                     settings.config['client']['max_download_retry']))
         #                 else:
         #                     raise Exception(
         #                         "Could not download chunk#{} by name of `{}` from BlackHole after {} retries."
